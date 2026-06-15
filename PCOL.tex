@@ -159,6 +159,25 @@ $$
 
 \end{frame}
 
+\begin{frame}{\thesection. Sketch of Proof for Theorem 2.11}
+\framesubtitle{$\quad$}
+{\Large {\b Main idea}: Reduce the infinite-dimensional operator problem to a hard high-dimensional neural network approximation problem.}
+\medskip
+
+{\Large
+\begin{enumerate}
+    \item {\b Embed a cube}: Show that the compact set $ K $ contains an infinite-dimensional cube $ Q_\alpha $, so inputs can be parameterized by coefficients $ (y_1,y_2,\dots) $
+    \item {\b Truncate}: Restrict attention to the first $ D $ coordinates; this creates a $ D $-dimensional approximation problem inside the operator problem
+    \item {\b Apply finite-dimensional CoD}: Use Yarotsky-type lower bounds for ReLU networks on $ [0,1]^D $
+    \item {\b Optimize $ D $ vs.\ $ \epsilon $}: Choosing $ D $ as a function of the target accuracy turns the finite-dimensional lower bound into an {\r exponential} lower bound in $ \epsilon^{-1} $
+\end{enumerate}
+}
+\medskip
+
+{\Large {\b Intuition}: Even though the operator acts on functions, hidden inside the function space there are arbitrarily many hard finite-dimensional directions.}
+
+\end{frame}
+
 \section{{\Large Overcoming the Curse: HJ-Net}}
 
 \begin{frame}{\thesection. The Hamilton--Jacobi Equation}
@@ -181,7 +200,7 @@ $$
 }
 \medskip
 
-{\Large {\b Key observation}: The Hamiltonian flow $ \Psi_t^\dagger $ is {\r independent of $ u_0 $} --- it only depends on the Hamiltonian $ H $.}
+{\Large {\b Key observation}: The same Hamiltonian flow map $ \Psi_t^\dagger $ is used for all inputs; once $ (q_0,p_0,z_0) $ is encoded from $ u_0 $, the evolution is determined by the Hamiltonian $ H $.}
 
 \end{frame}
 
@@ -249,6 +268,25 @@ with {\b algebraic} complexity bounds:}
 
 \end{frame}
 
+\begin{frame}{\thesection. Sketch of Proof for Theorem 5.1}
+\framesubtitle{$\quad$}
+{\Large {\b Main idea}: Decompose the error according to the three steps of HJ-Net.}
+\medskip
+
+{\Large
+\begin{enumerate}
+    \item {\b Approximate the flow}: The characteristic flow $ \Psi_t^\dagger : \mathbb{R}^{2d+1} \to \mathbb{R}^{2d+1} $ is finite-dimensional and smooth, so a ReLU network approximates it with algebraic cost
+    \item {\b Choose enough sample points}: Take $ N $ encoding points so the transported point cloud is dense enough in space
+    \item {\b Reconstruct stably}: Moving least squares turns the transported values $ (q_t^j,z_t^j) $ into an approximation of $ u(\cdot,t) $
+    \item {\b Combine the bounds}: Add the flow approximation error and reconstruction error, then balance parameters to make both of order $ \epsilon $
+\end{enumerate}
+}
+\medskip
+
+{\Large {\b Key difference from the negative result}: The proof uses special structure of the HJ equation --- characteristics reduce the hard operator problem to learning a manageable finite-dimensional flow.}
+
+\end{frame}
+
 \section{{\Large Conclusion and Future Work}}
 
 \begin{frame}{\thesection. Summary of Contributions}
@@ -306,4 +344,3 @@ with {\b algebraic} complexity bounds:}
 
 \backmatter
 \end{document}
-
