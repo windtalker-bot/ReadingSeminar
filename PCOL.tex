@@ -36,303 +36,272 @@ May 18, 2026
 \maketitle
 
 
-\section{{\Large The course of parametric complexity}}
+\section{{\Large Motivation and Background}}
 
-\begin{frame}[fragile]{\thesection. Parametric PDEs and FEONets}
+\begin{frame}[fragile]{\thesection. Operator Learning}
 \framesubtitle{$\quad$}
-{\Large {\color{blue}Equation:}} {\Large Given $ a (x), b (x), c (x) $, input parameter $ f (x) $, output solution $ u $:}
-\begin{equation}
-    - \text{div} (a (x) \nabla u) + b (x) \cdot \nabla u + c (x) u = f (x) \quad \text{in } D, \quad u|_{\partial D} = g (x).
-\end{equation}
-{\Large {\color{blue}Objective:} {\color{red}Estimate the error between the true solution and the FEONets solution.}}
+{\Large {\b What is operator learning?}}
 \medskip
 
-%{\Large {\color{blue}Question:} How does operator learning method work?}
-%\medskip
-
-{\Large {\color{blue} 1. Supervised learning (DeepONet, FNO):} $ \| u_{\text{NN}} (f; \theta) - u_{\text{trad}} \|^2 $}
+{\Large Neural operator architectures employ neural networks to approximate operators $ S^\dagger : X \to Y $ mapping between Banach spaces of functions.}
 \medskip
 
-{\Large $ u_{\text{trad}} $ is the solution obtained by traditional numerical methods, e.g., FEM {\b$ A u_{\text{trad}} = L $}
-\begin{align}
-    \| u_{\text{NN}} (f;\theta) - A^{-1} L \|^2
-\end{align} }
+{\Large {\b Applications:}
+\begin{itemize}
+    \item Accelerate model evaluations via emulation (e.g., solving PDEs)
+    \item Discover input--output maps from data when no model is available
+\end{itemize}
+}
+\medskip
 
-{\Large {\color{blue} 2. Unsupervised learning (FEONet):} $ \| A u_{\text{NN}}(f;\theta) - L \|^2 $}
+{\Large {\b Key architectures:} PCA-Net, DeepONet, Fourier Neural Operator (FNO)}
+\medskip
+
+{\Large {\b Central question:} {\r How many parameters are needed to achieve a given approximation accuracy $ \epsilon $?}}
 
 \end{frame}
 
-\begin{frame}{\thesection. FEONets}
+\begin{frame}{\thesection. The Encoding--Approximation--Reconstruction Framework}
 \framesubtitle{$\quad$}
-{\Large {\b$ f (x, \omega) = \omega_1 \sin{2 \pi \omega_2 x} + \omega_3 \cos{2 \pi \omega_4 x} $} }
+{\Large Operator learning frameworks decompose as:}
 \medskip
 
-{\Large {\b Input}: $ \omega = (\omega_1, \omega_2, \omega_3, \omega_4) $, i.i.d. uniform distribution on $ \Omega:= [0,1]^4 $, \big({\b More general input}: $ \{f (x_i)\}_{i=1}^{N} $\big)} 
-\medskip
-
-{\Large {\b Solution structure}: $ {u}_{h,\theta} (x, \omega) = \sum_{k=1}^{N_h} {\alpha}_k (\omega) \phi_k (x) $, $ \{\phi_k\}_{k=1}^{N_h} $ is the finite element basis}
-\medskip
-
-{\Large {\b Output}: coefficients $ {\alpha}(\omega) := ({\alpha}_1 (\omega), {\alpha}_2 (\omega), \dots, {\alpha}_{N_h} (\omega)) $ 
-}
-\medskip
-
-{\Large {\b Loss function}: $ \mathscr{L} ({\alpha}) := \int_{\Omega} \| A {\alpha} (\omega) - L \|_{\ell^2} \d P (\omega) $, $ A $ is the stiffness matrix, $ L $ is the load vector.}
-\medskip
-
-{\Large {\b Monte Carlo approximation}: $ \mathscr{L}^M ({\alpha}) = \frac{|\Omega|}{M} \sum_{j=1}^{M} \| A {\alpha} (\omega^j) - L \|_{\ell^2} $, $ \{\omega^j\}_{j=1}^{M} $ are i.i.d. samples from $ \Omega $}
-\end{frame} 
-
-\begin{frame}{\thesection. Neural network architecture}
-    \framesubtitle{$\quad$}
-    {\Large {\b Neural network architecture}: For each $ L \in \mathbb{N} $, an $ L $-layer ReLU neural netwok: $ f^L (x) : \mathbb{R}^{n_0} \to \mathbb{R}^{n_L} $ is defined by
-    \begin{align}
-        f^1 (x) = W^1 x + b^1, \quad f^\ell (x) = W^\ell \sigma (f^{\ell-1} (x)) + b^\ell, \quad \ell = 2,3,\dots,L,
-    \end{align} 
-    where $ W^\ell \in \mathbb{R}^{n_\ell \times n_{\ell-1}} $, $ b^\ell \in \mathbb{R}^{n_\ell} $, and $ \sigma (x) = \max\{0,x\} $ is the ReLU activation function.
-    }
-    \medskip
-
-    {\Large {\b Universal approximation theorem}: Suppose there is a sequence of NN spaces $ \{\mathcal{N}_{n}\}_{n=1}^{\infty} $ such that $ \mathcal{N}_n \subset \mathcal{N}_{n+1} $. Let $ K $ be a compact set in $ \mathbb{R}^{m} $ and $ g \in C (K, \mathbb{R}^{N}) $. Then there holds
-    \begin{align}
-        \lim_{n \to \infty} \inf_{\hat{g} \in \mathcal{N}_n} \| \hat{g} - g \|_{C (K)} = 0.
-    \end{align} 
-    }
-\end{frame} 
-
-\section{{\Large The Hamilton-Jacobi equation}}
-
-\begin{frame}{\thesection. Analytic framework for convergence}
-    \framesubtitle{$\quad$}
-    {\Large {\b Exact FEM solution}: $ u_h (x,\omega) = \sum_{k=1}^{N_h} \alpha_k^* (\omega) \phi_k (x) $, i.e., $ A \alpha^* (\omega) = L $.}
-    \medskip
-
-{\Large {\b approximation without quadrature}: $ {\alpha}_{n}^{\mathscr{L}} := \arg\min_{\alpha \in \mathcal{N}_n} \mathscr{L} (\alpha) = \arg\min_{\alpha \in \mathcal{N}_n} \int_{\Omega} \| A \alpha (\omega) - L \|_{\ell^2} \d P (\omega) $
-\begin{align}
-    u_{h,n} (x,\omega) = \sum_{k=1}^{N_h} ({\alpha}_{n}^{\mathscr{L}})_k (\omega) \phi_k (x).
-\end{align} 
-}
-
-{\Large {\b Final approximation}: $ {\alpha}_{n,M}^{\mathscr{L}} := \arg\min_{\alpha \in \mathcal{N}_n} \mathscr{L}^M (\alpha) = \arg\min_{\alpha \in \mathcal{N}_n} \frac{|\Omega|}{M} \sum_{j=1}^{M} \| A \alpha (\omega^j) - L \|_{\ell^2} $
-\begin{align}
-    u_{h,n,M} (x,\omega) = \sum_{k=1}^{N_h} ({\alpha}_{n,M}^{\mathscr{L}})_k (\omega) \phi_k (x).
-\end{align} 
-}
-    
-\end{frame} 
-
-\begin{frame}{\thesection. Analytic framework for convergence}
-    \framesubtitle{$\quad$}
-    {\Large $ \alpha^* \sim u_{h}, \quad  {\alpha}_{n}^{\mathscr{L}} \sim u_{h,n} , \quad {\alpha}_{n,M}^{\mathscr{L}} \sim u_{h,n,M} $.}
-    \medskip
-
-    {\Large {\b Error decomposition}: $ u - u_{h,n,M} = (u - u_h) + (u_h - u_{h,n}) + (u_{h,n} - u_{h,n,M}) $.
-\begin{align}
-   \| u_h - u_{h,n,M} \|_{L^1 (\Omega; L^2 (D))} =  &\; \int_{\Omega} \| \sum_{j=1}^{N_h} (\alpha_j^* - ({\alpha}_{n,M}^{\mathscr{L}})_j ) \phi_j \|_{L^2 (D)} \d P (\omega) \notag \\
-   \le &\; \int_{\Omega} \sum_{j=1}^{N_h} |\alpha_j^* - (\hat{\alpha}_{n,M}^{\mathscr{L}})_j| \| \phi_j \|_{L^2 (D)} \d P (\omega) \notag \\
-   \le &\; C N_h^{\frac{1}{2}} \| \alpha^* - {\alpha}_{n,M}^{\mathscr{L}} \|_{L^1 (\Omega; \ell^2)} \max_{1 \le j \le N_h} \| \phi_j \|_{L^2 (D)} \notag \\
-   \le &\; C \| \alpha^* - {\alpha}_{n,M}^{\mathscr{L}} \|_{L^1 (\Omega; \ell^2)} \notag \\
-   \le &\; C \big( \| \alpha^* - {\alpha}_{n}^{\mathscr{L}} \|_{L^1 (\Omega; \ell^2)} + \| {\alpha}_{n}^{\mathscr{L}} - {\alpha}_{n,M}^{\mathscr{L}} \|_{L^1 (\Omega; \ell^2)} \big).
-\end{align} 
-}
-    
-\end{frame} 
-
-\begin{frame}{\thesection. Estimate of $ \| \alpha^* - {\alpha}_n^{\mathscr{L}} \|_{L^1 (\Omega; \ell^2)} $}
-    \framesubtitle{$\quad$}
-    {\Large {\b $ \rho_{\text{min}}, \rho_{\text{max}} $}: the minimum and maximum singular values of $ A $.
-    \begin{align}
-        \| \alpha^* - {\alpha}_n^{\mathscr{L}} \|_{L^1 (\Omega; \ell^2)} \le &\; \frac{1}{\rho_{\text{min}}} \| A \alpha^* - A {\alpha}_n^{\mathscr{L}} \|_{L^1 (\Omega; \ell^2)} = \frac{1}{\rho_{\text{min}}} \| A {\alpha}_n^{\mathscr{L}} - L \|_{L^1 (\Omega; \ell^2)} = \frac{1}{\rho_{\text{min}}} \mathscr{L} ({\alpha}_n^{\mathscr{L}}) \notag \\
-        = &\; \frac{1}{\rho_{\text{min}}} \inf_{\alpha \in \mathcal{N}_n} \| A \alpha - L \|_{L^1 (\Omega; \ell^2)} \le \frac{\rho_{\text{max}}}{\rho_{\text{min}}} \inf_{\alpha \in \mathcal{N}_n} \| \alpha - \alpha^* \|_{L^1 (\Omega; \ell^2)} \notag \\
-        = &\; \kappa (A) \inf_{\alpha \in \mathcal{N}_n} \| \alpha - \alpha^* \|_{L^1 (\Omega; \ell^2)} \to 0 \quad \text{as } n \to \infty,
-    \end{align} 
-    where $ \kappa (A) = \frac{\rho_{\text{max}}}{\rho_{\text{min}}} $ is the condition number of $ A $.
-    }
-    
-\end{frame} 
-
-\begin{frame}{\thesection. Estimate of $ \| {\alpha}_n^{\mathscr{L}} - {\alpha}_{n,M}^{\mathscr{L}} \|_{L^1 (\Omega; \ell^2)} $}
-    \framesubtitle{$\quad$}
-    {\Large {\b Rademacher complexity}: For a function class $ \mathscr{F} $ and a sample $ S = \{X_1, X_2, \dots, X_M\} $, the empirical Rademacher complexity is defined as
-    \begin{align}
-        \mathscr{R}_M (\mathscr{F}) = \mathbb{E}_{\{X_i\}_{i=1}^{M}} \mathbb{E}_{\{\varepsilon\}_{i=1}^{M}} \bigg[ \sup_{f \in \mathscr{F}} \frac{1}{M}\sum_{i=1}^{M} \varepsilon_i f (X_i) \bigg],
-    \end{align} 
-    where $ \varepsilon_i $ are i.i.d. Rademacher random variables, $ \mathbb{P} (\varepsilon_i = 1) = \mathbb{P} (\varepsilon_i = -1) = \frac{1}{2} $.
-    \begin{align}
-        \mathbb{E}_{\{X_i\}_{i=1}^{M}} \bigg[ \sup_{f \in \mathscr{F}} \Big| \frac{1}{M} \sum_{i=1}^{M} f(X_i) - \mathbb{E}_{X \sim \mathbb{P}_{\Omega}}[f(X)] \Big| \bigg] \le 2 \mathscr{R}_M (\mathscr{F}).
-    \end{align} 
-{\b Estimate}: $ \mathbb{E} \big[|\mathscr{L}^M(\alpha) - \mathscr{L}(\alpha)|\big] \le 2 \mathscr{R}_M (\mathscr{F}_n^{\mathscr{L}}) $, where $ \mathscr{F}_n^{\mathscr{L}} = \{ \|A \alpha - L\|_{\ell^2} : \alpha \in \mathcal{N}_n^* \} $.
-    }
-
-    
-\end{frame}     
-
-\begin{frame}{\thesection. Estimate of $ \| {\alpha}_n^{\mathscr{L}} - {\alpha}_{n,M}^{\mathscr{L}} \|_{L^1 (\Omega; \ell^2)} $ (continued)}
-    \framesubtitle{$\quad$}
-    {\Large 
-    {\setlength{\abovedisplayskip}{-30pt}
-    \begin{align}
-        \mathbb{E} \big[ \| {\alpha}_n^{\mathscr{L}} - {\alpha}_{n,M}^{\mathscr{L}} \|_{L^1 (\Omega; \ell^2)} \big] \le &\; \frac{1}{\rho_{\text{min}}} \mathbb{E} \big[\| A {\alpha}_n^{\mathscr{L}} - A {\alpha}_{n,M}^{\mathscr{L}} \|_{L^1 (\Omega; \ell^2)} \big] \notag \\
-        \le &\; \frac{1}{\rho_{\text{min}}} \mathbb{E} \big[\| A {\alpha}_n^{\mathscr{L}} - L \|_{L^1 (\Omega; \ell^2)} + \| A {\alpha}_{n,M}^{\mathscr{L}} - L \|_{L^1 (\Omega; \ell^2)}\big] \notag \\
-        = &\; \frac{1}{\rho_{\text{min}}} \mathbb{E} \big[\mathscr{L} ({\alpha}_{n}^{\mathscr{L}}) + \mathscr{L}({\alpha}_{n,M}^{\mathscr{L}})\big] \notag \\
-        \le &\; \frac{1}{\rho_{\text{min}}} \mathbb{E} \big[\mathscr{L}({\alpha}_n^{\mathscr{L}}) + \mathscr{L}^M({\alpha}_{n,M}^{\mathscr{L}})\big] + \frac{1}{\rho_{\text{min}}} \mathbb{E} \big[\mathscr{L}({\alpha}_{n,M}^{\mathscr{L}}) - \mathscr{L}^M({\alpha}_{n,M}^{\mathscr{L}})\big] \notag \\
-        \le &\; \frac{1}{\rho_{\text{min}}} \mathbb{E} \big[\mathscr{L}({\alpha}_n^{\mathscr{L}}) + \mathscr{L}^M({\alpha}_{n}^{\mathscr{L}})\big] + \frac{2}{\rho_{\text{min}}} \mathscr{R}_M (\mathscr{F}_n^{\mathscr{L}}) \notag \\
-        \le &\; \frac{1}{\rho_{\text{min}}} \mathbb{E} \big[\mathscr{L}^M ({\alpha}_n^{\mathscr{L}}) - \mathscr{L} ({\alpha}_n^{\mathscr{L}})\big] + \frac{2}{\rho_{\text{min}}}\mathbb{E} \big[\mathscr{L} ({\alpha}_n^{\mathscr{L}})\big] + \frac{2}{\rho_{\text{min}}} \mathscr{R}_M (\mathscr{F}_n^{\mathscr{L}}) \notag \\
-        \le &\; \frac{4}{\rho_{\text{min}}} \mathscr{R}_M (\mathscr{F}_n^{\mathscr{L}}) + 2  \kappa (A) \inf_{\alpha \in \mathcal{N}_n} \| \alpha - \alpha^* \|_{L^{1}(\Omega; \ell^2)} .
-    \end{align} }
-    }
-
-\end{frame} 
-
-\begin{frame}{\thesection. Final result}
-    \framesubtitle{$\quad$}
-    {\Large {\b Final result}: If for all $ n \in \mathbb{N} $, $ \mathscr{R}_M (\mathscr{F}_n^{\mathscr{L}}) \to 0 $ as $ M \to \infty $, then
-    \begin{align}
-        \mathbb{E} [\| u_h - u_{h,n,M} \|_{L^1 (\Omega; L^2 (D))} ] \le C \big(\frac{1}{\rho_{\text{min}}} \mathscr{R}_M (\mathscr{F}_n^{\mathscr{L}}) + \kappa (A) \inf_{\alpha \in \mathcal{N}_n} \| \alpha - \alpha^* \|_{L^{1}(\Omega; \ell^2)} \big) \to 0 \notag \\
-         \quad \text{as } n, M \to \infty.
-    \end{align} 
-    }
-	\medskip 
-	
-	{\Large {\b Explicit convergence rate}: For nonsymmetric case, no direct estimate for $ \frac{1}{\rho_{\text{min}}} $.}
-    
-\end{frame} 
-
-
-
-\section{{\Large Explicit error for self-adjoint PDEs}}
-
-\begin{frame}{\thesection. Explicit error for self-adjoint PDEs}
-    \framesubtitle{$\quad$}
-	{\Large {\b Self-adjoint case}: $ A $ is symmetric and positive definite, i.e., $ \rho_{\text{min}} = \lambda_{\text{min}} (A) \ge C h^d $, $ \rho_{\text{max}} = \lambda_{\text{max}} \le C h^{d-2} $.
-\begin{align}
-	\kappa (A) = \frac{\rho_{\text{max}}}{\rho_{\text{min}}} = \frac{\lambda_{\text{max}} (A)}{\lambda_{\text{min}} (A)} \le C h^{-2}.
-\end{align} 
-	}
-	\medskip
-
-	{\Large Still need to estimate {\b$ \mathscr{R}_M (\mathscr{F}_n^{\mathscr{L}}) $} and {\b$ \inf_{\alpha \in \mathcal{N}_n} \| \alpha - \alpha^* \|_{L^{1}(\Omega;\ell^2)} $} to obtain the explicit convergence rate. 
-	}
-\end{frame}
-
-\begin{frame}{ \thesection. Estimate of $ \inf_{\alpha \in \mathcal{N}_n} \| \alpha - \alpha^* \|_{L^{1}(\Omega;\ell^2)} $}
-    \framesubtitle{$\quad$}
-    {\Large 
-	\begin{Theorem}[Barron (1993); E et al. (2022)]
-		Let $ g \in \mathscr{W} (\Omega) $ and $ n \in \mathbb{N} $. Then there exists a two-layer ReLU neural network $ g_{\theta} \in \mathcal{N}_n $ with the parameter {\b$ \theta = (a_j , b_j , c_j)_{j=1}^{n} $} and $ \mathcal{N}_n $ collecting {\b$ \frac{1}{n}\sum_{j=1}^n a_j \sigma (b_j \cdot \omega + c_j) _{i=1}^{n} $} such that {\b$ \| \theta \|_{\mathscr{P}} \le 2 \| g \|_{\mathscr{B}^2 (\Omega)} $}, and 
-		\begin{align}
-						\| g_{\theta} - g \|_{L^2 (\Omega;\ell^2)} \le C \| g \|_{\mathscr{B}^2 (\Omega;\ell^2)} n^{-\frac{1}{2}}.
-		\end{align} 
-	\end{Theorem} 
-    $ \| \theta \|_{\mathscr{P}} := \big\|\frac{1}{n} \sum_{j=1}^n a_j \big(\| b_j \|_{\ell^1} + |c_j| \big)\big\|_{\ell^{\infty}}. $
-
-    $ \| g \|_{\mathscr{B}^s(\Omega)} := \inf_{g_e |_{\Omega} = g} \int_{\mathbb{R}^{m}}(1+ |\xi|)^s |\hat{g}_e (\xi)| \d \xi  $, $ \hat{g}_e $ is the Fourier transform of $ g_e $     
-    {\b\begin{align}
-        \inf_{\alpha \in \mathcal{N}_n} \| \alpha - \alpha^* \|_{L^{1}(\Omega;\ell^2)} \le C \inf_{\alpha \in \mathcal{N}_n} \| \alpha - \alpha^* \|_{L^{2} (\Omega;\ell^2)} \le C n^{-\frac{1}{2}} \| \alpha^* \|_{\mathscr{B}^2 (\Omega;\ell^2)}.
-    \end{align} }
-    }
-\end{frame} 
-
-\begin{frame}{\thesection. Estimate of $ \| \alpha^* \|_{\mathscr{B}^2 (\Omega)} $}
-    \framesubtitle{$\quad$}
-    {\Large Since $ \alpha^* (\omega) = A^{-1} L (\omega) $ and $ L = \int_{D} f (x,\omega) \Phi (x) \d x $ with $ \Phi = (\phi_1 , \phi_2 , \cdots , \phi_{N_h})^\top $, we have 
-    \begin{align}
-        \hat{\alpha}^* (\xi) = A^{-1} \int_{D} \hat{f} (x,\xi) \Phi (x) \d x.
-    \end{align} 
-    Then we have
-    \begin{align}
-        \| \alpha^* \|_{\mathscr{B}^2 (\Omega;\ell^2)} = &\; \int_{\mathbb{R}^{m}} (1 + |\xi|)^2 \| \hat{\alpha}^* (\xi) \|_{\ell^2} \d \xi \notag \\
-        \le &\; \int_{\mathbb{R}^{m}} (1 + |\xi|)^2 \int_{D} |\hat{f} (x,\xi)| \|A^{-1} \Phi (x) \|_{\ell^2} \d x \d \xi .
-    \end{align} 
-    Since $ \| A^{-1} \Phi \|_{\ell^2} \le \frac{1}{\rho_{\text{min}}} \| \Phi (x) \|_{\ell^2} \le \frac{N_h^{1/2}}{ \rho_{\text{min}}} \sim h^{-3d/2} $, we have
-    \begin{equation}
-        \| \alpha^* \|_{\mathscr{B}^2 (\Omega;\ell^2)} \le C h^{-3d/2} \int_{D}\int_{\mathbb{R}^{m}} (1 + |\xi|)^2  |\hat{f} (x,\xi)| \d x \d \xi \sim {\b h^{-3d/2} \| f \|_{L^{1}(D;\mathscr{B}^2 (\Omega))}}.
-    \end{equation} 
-    }
-    
-\end{frame} 
-
-\begin{frame}{\thesection. Estimate of $ \mathscr{R}_M (\mathscr{F}_n^{\mathscr{L}}) $}
-    \framesubtitle{$\quad$}
-    {\Large 
-    \begin{Theorem}[Neyshabur et al., 2015; E et al., 2022]
-        For the function class $ \mathcal{N}_{n}^{*} = \{g_{\theta} \in \mathcal{N}_n : \| \theta \|_{\mathscr{P}} \le Q \} $, we have
-        \begin{align}
-            \mathscr{R}_M (\mathcal{N}_n^*) \le C \frac{Q N_h}{\sqrt{M}}.
-        \end{align}
-    \end{Theorem} 
-    %$ \mathcal{N}_n^* = \{\alpha \in \mathcal{N}_n : \| \theta \|_{\mathscr{P}} \le Q \}, \quad \mathscr{F}_{n}^{\mathscr{L}} = \{ \| A \alpha - L \|_{\ell^2}: \alpha \in \mathcal{N}_n^* \}$
-    {\setlength{\abovedisplayskip}{-25pt}
-    \begin{align}
-        \mathscr{R}_M (\mathscr{F}_n^{\mathscr{L}}) = &\; \mathbb{E}_{\{X_i\}_{i=1}^{M}} \mathbb{E}_{\{\varepsilon\}_{i=1}^{M}} \bigg[ \sup_{\alpha \in \mathcal{N}_n^*} \frac{1}{M}\sum_{i=1}^{M} \varepsilon_i  \| A \alpha (\omega^i) - L \|_{\ell^2} \bigg] \notag \\
-        \le &\; \mathbb{E}_{\{\omega^i\}_{i=1}^{M}} \mathbb{E}_{\{\varepsilon\}_{i=1}^{M}} \bigg[ \sup_{\alpha \in \mathcal{N}_n^*} \frac{1}{M}\sum_{i=1}^{M} \varepsilon_i  \| A \alpha (\omega^i) \|_{\ell^2} \bigg] \notag \\
-        \le &\; \rho_{\text{max}} \mathbb{E}_{\{\omega^i\}_{i=1}^{M}} \mathbb{E}_{\{\varepsilon\}_{i=1}^{M}} \bigg[ \sup_{\alpha \in \mathcal{N}_n^*} \frac{1}{M}\sum_{i=1}^{M} \varepsilon_i  \| \alpha (\omega^i) \|_{\ell^2} \bigg] = \rho_{\text{max}} \mathscr{R}_M (\mathcal{N}_n^*) \le C \frac{Q}{\sqrt{M}} h^{-2}.
-    \end{align} }
-    } 
-    
-\end{frame} 
-
-\begin{frame}{\thesection. Final convergence rate}
-    \framesubtitle{$\quad$}
-    {\Large {\b Final convergence rate}: If $ \| f \|_{L^{1}(D;\mathscr{B}^2 (\Omega))} < \infty $, then
-    \begin{align}
-        \mathbb{E} \Big[\| u - u_{h,n,M} \|_{L^1 (\Omega; L^2 (D))} \Big] \le &\; \mathbb{E} \Big[ \| u - u_h \|_{L^1 (\Omega; L^2 (D))} \Big] + C n^{-\frac{1}{2}} h^{-\frac{3d}{2}} + C Q h^{-2} M^{-\frac{1}{2}}  \notag \\
-        \le &\; C h^{\ell + 1} + C n^{-\frac{1}{2}} h^{-\frac{3d}{2}} + C Q h^{-2} M^{-\frac{1}{2}} \notag \\
-        = &\; C h^{\ell+1} + C n^{-\frac{1}{2}} \kappa (A)^{\frac{3d}{4}} + C Q \kappa (A) M^{-\frac{1}{2}}.
-    \end{align} 
-    }
-    
-\end{frame} 
-
-\section{{\Large Numerical Experiments}}
-
-\begin{frame}{\thesection. Numerical Experiments}
-    \framesubtitle{$\quad$}
-    \begin{figure}
-        \includegraphics[width=1\textwidth]{fig/fig1.png}
-    \end{figure} 
-\end{frame} 
-
-\begin{frame}{\thesection. Numerical Experiments}
-    \framesubtitle{$\quad$}
-    \begin{figure}
-        \includegraphics[width=1\textwidth]{fig/fig2.png}
-    \end{figure} 
-\end{frame} 
-
-\begin{frame}{\thesection. Numerical Experiments}
-    \framesubtitle{$\quad$}
-    \begin{figure}
-        \includegraphics[width=1\textwidth]{fig/fig3.png}
-    \end{figure} 
-\end{frame} 
-
-\section{{\Large Conclusion} }
-\begin{frame}{\thesection. Conclusion}
-\framesubtitle{$\quad$}
-{\Large {\b Equation:} $ 
-    - \text{div} (a (x) \nabla u) + b (x) \cdot \nabla u + c (x) u = f (x) \quad \text{in } D, \quad u|_{\partial D} = g (x).
- $} 
-\medskip
-
-{\Large {\b Solution Structure:} $ u = \sum_{i = 1}^{N_h}(\hat{\alpha}_{n,M}^{\mathscr{L}})_i \phi_i (t,x) $}
-\medskip
-
-{\Large {\b Loss function:} $ \mathscr{L}^M (\alpha) =  \frac{|\Omega|}{M} \sum_{j=1}^{M} \| A \alpha (\omega^j) - L \|_{\ell^2}  $}
-\medskip
-
-{\Large {\b Convergence rate:} $ C h^{\ell+1} + C n^{-\frac{1}{2}} \kappa (A)^{\frac{3d}{4}} + C Q \kappa (A) M^{-\frac{1}{2}} $}
-\medskip
-
-{\Large {\b Limitations}:
+{\Large 
 \begin{enumerate}
-    \item Obtain the explicit convergence rate for nonsymmetric case
-    \item Obtain the convergence rate for more general input, e.g., $ \{f (x_i)\}_{i=1}^{N} $
-\end{enumerate} 
+    \item {\b Encoding $ E $}: Map infinite-dimensional input $ u \in X $ to finite-dimensional representation $ E(u) \in \mathbb{R}^{D_X} $
+    \item {\b Neural Network $ \Psi $}: Map encoded input to encoded output $ \Psi : \mathbb{R}^{D_X} \to \mathbb{R}^{D_Y} $
+    \item {\b Reconstruction $ R $}: Reconstruct output function from finite-dimensional representation
+\end{enumerate}
+}
 \medskip
 
-{\b Future work}: nonlinear PDEs, time-dependent PDEs, complex geometries, etc.
+{\Large {\b Neural operator}: $ S = R \circ \Psi \circ E \approx S^\dagger $}
+\medskip
+
+{\Large {\b Complexity} $ := $ size of $ \Psi $ (number of nonzero weights and biases)}
+
+\end{frame}
+
+\begin{frame}{\thesection. Curse of Dimensionality for Neural Networks}
+\framesubtitle{$\quad$}
+{\Large {\b Finite-dimensional CoD} (Yarotsky, 2017):}
+\medskip
+
+{\Large For functions $ f \in C^r([0,1]^D) $, any ReLU network $ \Psi $ achieving accuracy $ \epsilon $ must have:
+$$
+\text{size}(\Psi) \ge \epsilon^{-\gamma D / r}
+$$
 }
+\medskip
+
+{\Large {\b Intuition}: As dimension $ D \to \infty $, the complexity grows exponentially.}
+\medskip
+
+{\Large {\b Key insight for operator learning}: Since neural operators map between {\r infinite-dimensional} spaces, the encoded dimension $ D_X, D_Y \gg 1 $, suggesting a ``scaling limit'' of the CoD.}
+
+\end{frame}
+
+\section{{\Large The Curse of Parametric Complexity}}
+
+\begin{frame}{\thesection. Main Objective}
+\framesubtitle{$\quad$}
+{\Large {\b Two main contributions of this paper:}}
+\medskip
+
+{\Large {\b 1.} {\r Prove a general curse}: For operators characterized only by $ C^r $- or Lipschitz-regularity, operator learning suffers from a ``curse of parametric complexity'' --- complexity grows {\r exponentially} in $ \epsilon^{-1} $.}
+\medskip
+
+{\Large {\b 2.} {\b Overcome the curse}: For Hamilton--Jacobi (HJ) equations, leverage additional structure (method of characteristics) to achieve {\b algebraic} complexity bounds.}
+\medskip
+
+{\Large {\b Key message}: Regularity alone is not enough. One must exploit {\r problem-specific structure} to achieve efficient operator learning.}
+
+\end{frame}
+
+\begin{frame}{\thesection. The Curse of Parametric Complexity (Theorem 2.11)}
+\framesubtitle{$\quad$}
+{\Large {\b Setting}: Let $ K \subset X $ be compact, containing an infinite-dimensional hypercube $ Q_\alpha $ with decay rate $ \alpha > 1 $.}
+\medskip
+
+{\Large {\b Result}: For any $ r \in \mathbb{N} $ and $ \delta > 0 $, there exists a $ C^r $-functional $ S^\dagger : K \to \mathbb{R} $ such that approximation to accuracy $ \epsilon $ requires:
+$$
+\text{cmplx}(S_\epsilon) \ge \exp\!\big(c \, \epsilon^{-1/(\alpha + 1 + \delta)r}\big)
+$$
+}
+\medskip
+
+{\Large {\b Interpretation}: 
+\begin{itemize}
+    \item No algebraic rate is achievable for general $ C^r $-regular operators
+    \item Applies to PCA-Net, DeepONet, FNO, and NOMAD
+    \item This is an infinite-dimensional analogue of the classical CoD
+\end{itemize}
+}
+
+\end{frame}
+
+\begin{frame}{\thesection. Intuition Behind the Curse}
+\framesubtitle{$\quad$}
+{\Large {\b Why does the curse arise?}}
+\medskip
+
+{\Large 
+\begin{itemize}
+    \item Compact sets $ K \subset X $ in infinite-dimensional spaces contain ``infinite-dimensional hypercubes'' $ Q_\alpha = \big\{ A \sum_{j=1}^\infty j^{-\alpha} y_j e_j : y_j \in [0,1] \big\} $
+    \item As we increase the encoding dimension $ D_X $, we access more and more ``directions'' in $ K $
+    \item The finite-dimensional CoD kicks in for each new direction
+    \item The scaling limit $ D \to \infty $ leads to {\r exponential} lower bounds
+\end{itemize}
+}
+\medskip
+
+{\Large {\b Consequence}: To beat the curse, one must leverage structure {\r beyond} smoothness.}
+
+\end{frame}
+
+\section{{\Large Overcoming the Curse: HJ-Net}}
+
+\begin{frame}{\thesection. The Hamilton--Jacobi Equation}
+\framesubtitle{$\quad$}
+{\Large {\b HJ equation}: Given initial data $ u_0 $, find $ u(q,t) $:
+$$
+\partial_t u + H(q, \nabla_q u) = 0, \quad u(t=0) = u_0
+$$
+on periodic domain $ \Omega = [0, 2\pi]^d $.
+}
+\medskip
+
+{\Large {\b Solution operator}: $ S_t^\dagger : u_0 \mapsto u(\cdot, t) $}
+\medskip
+
+{\Large {\b Method of characteristics}: The solution can be computed via the Hamiltonian ODE system:
+$$
+\dot{q} = \nabla_p H(q,p), \quad \dot{p} = -\nabla_q H(q,p), \quad p_0 = \nabla_q u_0(q_0)
+$$
+}
+\medskip
+
+{\Large {\b Key observation}: The Hamiltonian flow $ \Psi_t^\dagger $ is {\r independent of $ u_0 $} --- it only depends on the Hamiltonian $ H $.}
+
+\end{frame}
+
+\begin{frame}{\thesection. HJ-Net Architecture}
+\framesubtitle{$\quad$}
+{\Large {\b Three-step operator}: $ S_t = R \circ P \circ \Psi_t^N \circ E $}
+\medskip
+
+{\Large {\b Step (a) Encode}: Evaluate $ u_0 $ at $ N $ points:
+$$
+E(u_0) = \{(q_0^j, \nabla u_0(q_0^j), u_0(q_0^j))\}_{j=1}^N
+$$
+}
+
+{\Large {\b Step (b) Flow}: Apply neural network $ \Psi_t \approx \Psi_t^\dagger $ to each encoded triple:
+$$
+(q_0^j, p_0^j, z_0^j) \mapsto (q_t^j, p_t^j, z_t^j)
+$$
+}
+
+{\Large {\b Step (c) Reconstruct}: Interpolate $ \{(q_t^j, z_t^j)\}_{j=1}^N $ via moving least squares}
+\medskip
+
+{\Large {\b Why this works}: The flow map $ \Psi_t^\dagger : \mathbb{R}^{2d+1} \to \mathbb{R}^{2d+1} $ is a {\r fixed-dimensional} smooth function --- no infinite-dimensional curse!}
+
+\end{frame}
+
+\begin{frame}{\thesection. HJ-Net Beats the Curse (Theorem 5.1)}
+\framesubtitle{$\quad$}
+{\Large {\b Result}: For HJ equation with $ C^r $ initial data ($ r \ge 2 $) and $ C^{r+1} $ Hamiltonian, the HJ-Net achieves:
+$$
+\sup_{u_0 \in F} \| S_t(u_0) - S_t^\dagger(u_0) \|_{L^\infty} \le \epsilon
+$$
+with {\b algebraic} complexity bounds:}
+\medskip
+
+{\Large 
+\begin{itemize}
+    \item Number of encoding points: $ N \le C \epsilon^{-d/r} $
+    \item Neural network size: $ \text{size}(\Psi_t) \le C \epsilon^{-(2d+1)/r} \log(\epsilon^{-1}) $
+    \item Neural network depth: $ \text{depth}(\Psi_t) \le C \log(\epsilon^{-1}) $
+\end{itemize}
+}
+\medskip
+
+{\Large {\b Key point}: Complexity grows only {\b polynomially} in $ \epsilon^{-1} $ --- the curse is overcome!}
+
+\end{frame}
+
+\begin{frame}{\thesection. Why HJ-Net Succeeds}
+\framesubtitle{$\quad$}
+{\Large {\b Mechanisms for overcoming the curse:}}
+\medskip
+
+{\Large 
+\begin{enumerate}
+    \item {\b Separation of concerns}: The Hamiltonian flow $ \Psi_t^\dagger $ does not depend on the input $ u_0 $; it is a {\r finite-dimensional} map $ \mathbb{R}^{2d+1} \to \mathbb{R}^{2d+1} $
+    \item {\b Structure exploitation}: The method of characteristics provides an exact decomposition of the solution operator
+    \item {\b Scattered data interpolation}: Moving least squares provides a stable reconstruction from the transported data points
+\end{enumerate}
+}
+\medskip
+
+{\Large {\b Contrast with generic approaches}: PCA-Net, DeepONet, FNO treat the operator as a ``black box'' and cannot avoid the curse for general operators.}
+
+\end{frame}
+
+\section{{\Large Conclusion and Future Work}}
+
+\begin{frame}{\thesection. Summary of Contributions}
+\framesubtitle{$\quad$}
+{\Large {\b Contribution 1 --- The Curse (Negative Result):}
+\begin{itemize}
+    \item General $ C^r $-regular operators require exponential complexity
+    \item Applies to PCA-Net, DeepONet, FNO, NOMAD
+    \item Regularity alone is insufficient for efficient operator learning
+\end{itemize}
+}
+\medskip
+
+{\Large {\b Contribution 2 --- Overcoming the Curse (Positive Result):}
+\begin{itemize}
+    \item HJ-Net exploits the characteristic structure of HJ equations
+    \item Achieves algebraic (polynomial) complexity bounds
+    \item The flow map is finite-dimensional $\Rightarrow$ no infinite-dimensional curse
+\end{itemize}
+}
+\medskip
+
+{\Large {\b Overall message}: Efficient operator learning requires leveraging {\r problem-specific structure} beyond smoothness.}
+
+\end{frame}
+
+\begin{frame}{\thesection. Limitations}
+\framesubtitle{$\quad$}
+{\Large 
+\begin{enumerate}
+    \item {\b Classical solutions only}: The approach based on characteristics requires that classical solutions exist; it cannot handle viscosity solutions after singularity formation
+    \item {\b Short time intervals}: The analysis is restricted to $ t \in [0, T] $ where $ T < T^*(F) $, the maximal existence time of classical solutions
+    \item {\b Fixed spatial dimension}: The paper does not address the CoD with respect to the spatial dimension $ d $ (only the infinite-dimensional input space)
+    \item {\b ReLU networks only}: The lower bounds are established for feedforward ReLU networks; extensions to other activations remain open
+    \item {\b No semigroup property}: The approximate operator $ S_t $ does not satisfy the semigroup property, so iteration over time is not directly possible
+\end{enumerate}
+}
+
+\end{frame}
+
+\begin{frame}{\thesection. Future Work}
+\framesubtitle{$\quad$}
+{\Large 
+\begin{enumerate}
+    \item {\b Viscosity solutions}: Extend the methodology beyond classical solutions to handle singularities and shocks in HJ equations
+    \item {\b Symplectic neural networks}: Use symplectic architectures to learn the Hamiltonian flow, preserving geometric structure
+    \item {\b Combining with CoD w.r.t. $ d $}: Integrate with existing work on beating the curse of dimensionality in the spatial dimension
+    \item {\b $ C^1 $ topology estimates}: Generalize error estimates to the $ C^1 $ topology to enable operator iteration over longer time intervals
+    \item {\b Information-theoretic perspective}: Characterize the curse independently of activation function (cf. Lanthaler, 2024)
+    \item {\b Other PDE classes}: Identify structure in other PDEs that can be leveraged similarly to characteristics in HJ equations
+\end{enumerate}
+}
+
 \end{frame}
 
 \backmatter
