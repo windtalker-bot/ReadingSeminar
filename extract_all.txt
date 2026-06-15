@@ -1,0 +1,3980 @@
+=== PAGE 1 ===
+IMA Journal of Numerical Analysis (2026) 46, 647–712
+https://doi.org/10.1093/imanum/draf028
+Advance Access publication on 15 August 2025
+The parametric complexity of operator learning
+SAMUEL LANTHALER∗ AND ANDREW M. STUART
+California Institute of Technology, 1200 E California Blvd, Pasadena, CA 91125, USA
+∗Corresponding author: slanth@caltech.edu
+[Received on 28 February 2024; revised on 21 October 2024]
+Neural operator architectures employ neural networks to approximate operators mapping between Banach
+spaces of functions; they may be used to accelerate model evaluations via emulation, or to discover models
+from data. Consequently, the methodology has received increasing attention over recent years, giving rise
+to the rapidly growing field of operator learning. The first contribution of this paper is to prove that for
+general classes of operators, which are characterized only by their C
+r- or Lipschitz-regularity, operator
+learning suffers from a ‘curse of parametric complexity’, which is an infinite-dimensional analogue of the
+well-known curse of dimensionality encountered in high-dimensional approximation problems. The result
+is applicable to a wide variety of existing neural operators, including PCA-Net, DeepONet and the Fourier
+neural operator. The second contribution of the paper is to prove that this general curse can be overcome for
+solution operators defined by the Hamilton–Jacobi (HJ) equation; this is achieved by leveraging additional
+structure in the underlying solution operator, going beyond regularity. To this end a novel neural operator
+architecture is introduced, termed HJ-Net, which explicitly takes into account characteristic information
+of the underlying Hamiltonian system. Error and complexity estimates are derived for HJ-Net, which
+show that this architecture can provably beat the curse of parametric complexity related to the infinite-
+dimensional input and output function spaces.
+Keywords: operator learning; complexity; Hamilton–Jacobi; deep learning.
+1. Introduction
+This paper is devoted to a study of the computational complexity of the approximation of maps between
+Banach spaces by means of neural operators. The paper has two main focii: establishing a complexity
+barrier for general classes of C
+r− or Lipschitz regular maps; and then showing that this barrier can be
+beaten for Hamilton–Jacobi (HJ) equations. In Subsection 1.1 we give a detailed literature review; we set
+in context the definition of ‘the curse of parametric complexity’ that we introduce and use in this paper;
+and we highlight our main contributions. Then, in Subsection 1.2, we overview the organization of the
+remainder of the paper.
+1.1 Context and literature review
+The use of neural networks to learn operators, typically mapping between Banach spaces of functions
+defined over subsets of finite-dimensional Euclidean space and referred to as neural operators ,i s
+receiving growing interest in the computational science and engineering community ( Chen & Chen,
+1995; Zhu & Zabaras, 2018 ; Bhattacharya et al. , 2021 ; Khoo et al. , 2021 ; Li et al. , 2021 ; Nelsen &
+Stuart, 2021; Lu et al., 2021b; Boullé et al., 2022). The methodology has the potential for accelerating
+numerical methods for solving partial differential equations (PDEs) when a model relating inputs and
+outputs is known; and it has the potential for discovering input–output maps from data when no model
+is available.
+© The Author(s) 2025. Published by Oxford University Press on behalf of the Institute of Mathematics and its Applications. All rights reserved.
+For commercial re-use, please contact reprints@oup.com for reprints and translation rights for reprints. All other permissions can be obtained
+through our RightsLink service via the Permissions link on the article page on our site—for further information please contact
+journals.permissions@oup.com.
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 2 ===
+648 S. LANTHALER AND A. M. STUART
+The computational complexity of learning and evaluating such neural operators is crucial to
+understanding when the methods will be effective. Numerical experiments addressing this issue may be
+found in de Hoop et al. (2022) and the analysis of linear problems from this perspective may be found in
+Boullé & Townsend (2022); de Hoop et al. (2023). Universal approximation theorems, applicable beyond
+the linear setting, may be found in Chen & Chen (1995) ; Bhattacharya et al. (2021); Kovachki et al.
+(2021); Lu et al. (2021b); Lanthaler et al. (2022); Yo uet al. (2022); Kovachki et al. (2023); Lanthaler
+et al. (2023a), but such theorems do not address the cost of achieving a given small error.
+Early work on operator approximation ( Mhaskar & Hahm, 1997 ) presents first quantitative bounds;
+most notably, this work identifies the continuous nonlinear n-widths of a space of continuous functionals
+defined on L2-spaces, showing that these n-widths decay at most (poly-)logarithmically in n. Both upper
+and lower bounds are derived in this specific setting. More recently, upper bounds on the computational
+complexity of recent approaches to operator learning based on deep neural networks, including the
+DeepONet (Lu et al., 2021b) and the Fourier neural operator (FNO) (Li et al., 2021), have been studied in
+more detail. Specific operator learning tasks arising in PDEs have been considered in the papers Schwab
+& Zech (2019) ; Kovachki et al. (2021); Deng et al. (2022); Herrmann et al. (2024); Lanthaler et al.
+(2022); Ryck & Mishra (2022); Marcati & Schwab (2023). Related complexity analysis for the PCA-Net
+architecture (Bhattacharya et al., 2021) has recently been established in Lanthaler (2023). These papers
+studying computational complexity focus on the issue of beating a form of the ‘curse of dimensionality
+(CoD)’ in these operator approximation tasks.
+In these operator learning problems the input and output spaces are infinite-dimensional, and hence
+the meaning of the CoD could be ambiguous. In this infinite-dimensional context ‘beating the curse’ is
+interpreted as identifying problems, and operator approximations applied to those problems, for which
+a measure of evaluation cost (referred to as their complexity) grows only algebraically with the inverse
+of the desired error. As shown rigorously in
+Lanthaler (2023) this is a nontrivial issue: for the PCA-Net
+architecture it has been established that such algebraic complexity and error bounds cannot be achieved
+for general Lipschitz (and even more regular) operators.
+As will be explained in detail in this work, this fact is not specific to PCA-Net, but extends to many
+other neural operator architectures. In fact, it can be interpreted as a scaling limit of the conventional
+CoD; this conventional curse affects finite-dimensional approximation problems when the underlying
+dimension d is very large. It can be shown that (ReLU) neural networks cannot overcome this curse, in
+general. As a consequence, neural operators, which build on neural networks, suffer from the scaling
+limit of this curse in infinite dimensions. To distinguish this infinite-dimensional phenomenon from the
+conventional CoD encountered in high-but-finite-dimensional approximation problems we will refer to
+the scaling limit identified in this work as ‘the curse of parametric complexity’ .
+The first contribution of this paper is to prove that for general classes of operators, which are
+characterized only by their Cr- or Lipschitz-regularity, operator learning suffers from such a curse of
+parametric complexity: Theorem 2.11 (and a variant thereof, Theorem 2.27) shows that, in this setting,
+there exist operators (and indeed even real-valued functionals) that are ϵ−approximable only with
+parametric model complexity that grows exponentially in ϵ−1.
+To overcome the general curse of parametric complexity implied by Theorem 2.11 (and Theorem
+2.27) efficient operator learning frameworks therefore have to leverage additional structure present
+in the operators of interest, going beyond Cr- or Lipschitz-regularity. Previous work on overcoming
+this curse for operator learning has mostly focused on operator holomorphy ( Schwab & Zech, 2019 ;
+Herrmann et al., 2020; Lanthaler et al., 2022) and the emulation of numerical methods ( Kovachki et al.,
+2021; Lanthaler et al., 2022; Lanthaler, 2023; Marcati & Schwab, 2023 ) as two basic mechanisms for
+overcoming the curse of parametric complexity for specific operators of interest. A notable exception
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 3 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 649
+are the complexity estimates for DeepONets in (Deng et al., 2022). These estimates are based on explicit
+representation of the solution; most prominently, this is achieved via the Cole–Hopf transformation
+for the viscous Burgers equation. Another distinct mechanism to overcome the curse of parametric
+complexity is highlighted by the notion of Barron spaces, e.g., Barron (1993); Bach (2017); Ma et al.
+(2022), which have recently been extended to the operator learning setting inKorolev (2022). In the finite-
+dimensional context functions belonging to such Barron spaces can be approximated at Monte-Carlo
+rates, which are independent of the dimension of the underlying domain. As shown in Korolev (2022)
+similar rates can be established in an infinite-dimensional Barron class setting. The curse of parametric
+complexity derived in this work indicates that spaces of r-times Fréchet differentiable operators cannot
+embed into operator Barron spaces, no matter the degree of differentiability r.
+An abstract characterization of the entire class of operators that allow for efficient approximation by
+neural operators would be very desirable. Unfortunately, this appears to be out of reach, at the current
+state of analysis. Indeed, as far as the authors are aware, there does not even exist such a characterization
+for any class of standard numerical methods, such as finite difference, finite element or spectral, viewed
+as operator approximators. Therefore, in order to identify settings in which operator learning can be
+effective (without suffering from the general curse of parametric complexity) we restrict attention to
+specific classes of operators of interest.
+The HJ equations present an application area that has the potential to be significantly impacted by the
+use of ideas from neural networks, especially regarding the solution of problems for functions defined
+over subsets of high-dimensional ( d) Euclidean space (Darbon & Osher, 2016; Chow et al., 2017, 2019;
+Darbon et al., 2020); in particular beating the CoD with respect to this dimension d has been the focus.
+We highlight works that propose adapted neural network architectures, reflecting known structure of
+viscosity solutions of the HJ equation, to approximate and represent individual solutions (Darbon &
+Meng, 2021; Meng et al., 2022). This research includes studies of analytical convergence rates for such
+architectures, as well as empirical works studying their practical performance ( Nakamura-Zimmerer
+et al. , 2020 ; Huré et al. , 2021 ; Darbon et al. , 2023 ). However, this work does not include operator
+learning, as it concerns settings in which only fixed instances of the PDE are solved. The purpose of
+the second part of this paper is to study the design and analysis of neural operators to approximate the
+solution operator for HJ equations; this operator maps the initial condition (a function) to the solution at
+a later time (another function).
+The second contribution of the paper is to prove in Theorem 5.1 that the general curse of parametric
+complexity can be overcome for maps defined by the solution operator of the HJ equation; this is achieved
+by exposing additional structure in the underlying solution operator, different from holomorphy and
+emulation and going beyond regularity, that can be leveraged by neural operators; for the HJ equations,
+the identified structure relies on representation of solutions of the HJ equations in terms of characteristics.
+In this paper the dimension d of the underlying spatial domain will be fixed and we do not study the CoD
+with respect to d. Instead, we demonstrate that it is possible to beat the curse of parametric complexity
+with respect to the infinite-dimensional nature of the input function for fixed (and moderate) d.
+1.2 Organization
+In Section 2 we present the first contribution: Theorem 2.11, together with the closely related Theorem
+2.27, which extends the general, but not exhaustive setting Theorem2.11, to include the FNO, establishes
+that the curse of parametric complexity is to be expected in operator learning. The following sections then
+focus on the second contribution, and hence on solution operators associated with the HJ equation; in
+Theorem 5.1 we prove that additional structure in the solution operator for this equation can be leveraged
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 4 ===
+650 S. LANTHALER AND A. M. STUART
+FIG. 1. Diagrammatic illustration of operator learning based on an encoding E, a neural network Ψ and a reconstruction R.
+to beat the curse of parametric complexity. In Section3 we describe the precise setting for the HJ equation
+employed throughout this paper; we recall the method of characteristics for solution of the equations; and
+we describe a short-time existence theorem. Section
+4 introduces the proposed neural operator, the HJ-
+Net, based on learning the flow underlying the method of characteristics and combining it with scattered
+data approximation. In Section 5 we state our approximation theorem for the proposed HJ-Net, resulting
+in complexity estimates that demonstrate that the curse of parametric complexity is avoided in relation to
+the infinite-dimensional nature of the input space (of initial conditions). Section 6 contains concluding
+remarks. While the high-level structure of the proofs is contained in the main body of the paper, many
+technical details are collected in the appendix, to promote readability.
+2. The curse of parametric complexity
+Operator learning seeks to employ neural networks to efficiently approximate operators mapping
+between infinite-dimensional Banach spaces of functions. To enable implementation of these methods
+in practice maps between the formally infinite-dimensional spaces have to be approximated using only
+a finite number of degrees of freedom.
+Commonly, operator learning frameworks can therefore be written in terms of an encoding, a neural
+network and a reconstruction step as shown in Fig. 1. The first step E encodes the infinite-dimensional
+input using a finite number of degrees of freedom. The second approximation step Ψ maps the encoded
+input to an encoded, finite-dimensional output. The final reconstruction step R reconstructs an output
+function, given the finite-dimensional output of the approximation mapping. The composition of these
+encoding, approximation and reconstruction mappings thus takes aninput function and maps it to another
+output function , and hence defines an operator. Existing operator learning frameworks differ in their
+particular choice of the encoder, neural network architecture and reconstruction mappings.
+We start by giving background discussion on the CoD in finite dimensions, in Subsection 2.1.
+We then describe the subject in detail for neural network-based operator learning, resulting in our
+notion of the curse of parametric complexity, in Subsection 2.2. In Subsection 2.3 we state our main
+theorem concerning the curse of parametric complexity for neural operators. Subsection2.4 demonstrates
+that the main theorem applies to PCA-Net, DeepONet and the NOMAD neural network architectures.
+Subsection 2.5 extends the main theorem to the FNO since it sits outside the framework introduced in
+Subsection 2.2.
+2.1 CoD for neural networks
+Since the neural network mapping Ψ : RDX → RDY in the decomposition shown in Fig. 1 typically
+maps between high-dimensional (encoded) spaces, with DX , DY ≫1, most approaches to operator
+learning employ neural networks to learn this mapping. The motivation for this is that, empirically,
+neural networks have been found to be exceptionally well suited for the approximation of such high-
+dimensional functions in diverse applications (
+Goodfellow et al. , 2016 ). Detailed investigation of the
+approximation theory of neural networks, including quantitative upper and lower approximation error
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 5 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 651
+bounds, has thus attracted a lot of attention in recent years ( Y arotsky, 2017; Y arotsky & Zhevnerchuk,
+2020; DeV oreet al. , 2021 ; Kohler & Langer, 2021 ; Lu et al. , 2021a ). Since we build on this analysis
+we summarize the relevant part of it here, restricting attention to ReLU neural networks in this work, as
+defined next; generalization to the use of other (piecewise polynomial) activation functions is possible.
+2.1.1 ReLU neural networks. Fix integer L and integers{dℓ}L+1
+ℓ=0 .L e t Aℓ∈ Rdℓ+1×dℓ and bℓ∈ Rdℓ+1
+for ℓ= 0,... , L. A ReLU neural network Ψ : RDX → RDY , x↦→ Ψ( x) is a mapping of the form
+⎧
+⎪⎪
+⎨
+⎪⎪
+⎩
+x
+0 = x,
+xℓ+1 = σ( Aℓxℓ+ bℓ), ℓ= 0,··· , L− 1,
+Ψ( x)= ALxL + bL,
+(2.1)
+where d0 = DX and dL+1 = DY . Here, the activation function σ : R→ R is extended pointwise to act
+on any Euclidean space; and in what follows we employ the ReLU activation function σ( x)= min{0, x}.
+We let θ :={ Aℓ, bℓ}L
+ℓ=0 and note that we have defined parametric mapping Ψ(· )= Ψ(· ; θ) . We define
+the depth of Ψ as the number of layers, and the size of Ψ as the number of nonzero weights and biases,
+i.e.,
+depth(Ψ )= L,s i z e (Ψ )=
+L∑
+ℓ=0
+{
+∥Aℓ∥0 +∥bℓ∥0
+}
+,
+where∥·∥0 counts the number of nonzero entries of a matrix or vector.
+2.1.2 Two simple facts from ReLU neural network calculus. The following facts will be used without
+further comment (see e.g. (Opschoor et al., 2022, section 2.2.3) for a discussion of more general results):
+If Ψ : RDX → RDY is an ReLU neural network, and A∈ RDX×d is a matrix, then there exists an ReLU
+neural network ˜Ψ : Rd → RDY , such that
+⎧
+⎪⎪
+⎨
+⎪⎪
+⎩
+˜Ψ( x)= Ψ( Ax), for all x∈ R
+d,
+depth(˜Ψ) = depth(Ψ )+ 1,
+size(˜Ψ) ≤ 2∥A∥0 + 2s i z e(Ψ ).
+(2.2)
+Similarly, if V ∈ Rd×DY is a matrix then there exists an ReLU neural network ˆΨ : RDX → Rd, such
+that
+⎧
+⎪⎪
+⎨
+⎪⎪
+⎩
+ˆΨ( x)= VΨ( x), for all x∈ R
+d,
+depth(ˆΨ) = depth(Ψ )+ 1,
+size(ˆΨ) ≤ 2∥V∥0 + 2s i z e(Ψ ).
+(2.3)
+The main nontrivial issue in (2.2) and (2.3) is to preserve the potentially sparse structure of the underlying
+neural networks; this is based on a concept of ‘sparse concatenation’ from Petersen & V oigtlaender
+(2018).
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 6 ===
+652 S. LANTHALER AND A. M. STUART
+2.1.3 Approximation theory and CoD for ReLU networks. One overall finding of research into
+the approximation power of ReLU neural networks is that, for function approximation in spaces
+characterized by smoothness, neural networks cannot entirely overcome the CoD ( Y arotsky, 2017;
+Y arotsky & Zhevnerchuk, 2020; Kohler & Langer, 2021 ; Lu et al. , 2021a ). This is illustrated by the
+following result, which builds on ( Y arotsky, 2017, theorem 5) derived by D. Y arotsky:
+PROPOSITION 2.1 (Neural network CoD). Let r ∈ N be given. For any dimension D ∈ N there exists
+fD,r ∈ Cr([0, 1]D; R) and constant ϵ,γ> 0, such that any ReLU neural network Ψ : RD → R achieving
+accuracy
+sup
+x∈[0,1]D
+|fD,r(x)− Ψ( x)|≤ ϵ,
+with ϵ≤ ϵ, has size at least size (Ψ )≥ ϵ−γ D/r. The constant ϵ= ϵ(r)> 0 depends only on r, and
+γ> 0 is universal. ♦
+The proof of Proposition 2.1 is included in Appendix A1. Proposition 2.1 shows that neural
+network approximation of a function between high-dimensional Euclidean spaces suffers from a CoD,
+characterized by an algebraic complexity with a potentially large exponent proportional to the dimension
+D≫1. This lower bound is similar to the approximation rates (upper bounds) achieved by traditional
+methods,
+1 such as polynomial approximation. This fact suggests that the empirically observed efficiency
+of neural networks may well rely on additional structure of functions f of practical interest, beyond their
+smoothness; for relevant results in this direction see, for example, Mhaskar et al. (2016); Gribonval et al.
+(2022).
+2.2 Curse of parametric complexity in operator learning
+In this work we consider the approximation of an underlying operator S† : X → Y acting between
+Banach spaces; specifically, we assume that the dimensions of the spaces X , Y are infinite.G i v e nt h e
+CoD in the finite-dimensional setting, Proposition 2.1 and letting D→∞ one would generally expect
+a super-algebraic, potentially even exponential, lower bound on the ‘complexity’ of neural operators
+S approximating such S†, as a function of the accuracy ϵ. In this subsection we make this statement
+precise for a general class of neural operators, in Theorem 2.11. This is preceded by a discussion of
+relevant structure of compact sets in infinite-dimensional function spaces and a discussion of a suitable
+class of ‘neural operators’.
+2.2.1 Infinite-dimensional hypercubes. Proposition 2.1 was stated for the unit cube [0, 1] D as the
+underlying domain. In the finite-dimensional setting of Proposition 2.1 the approximation rate turns out
+to be independent of the underlying compact domain, provided that the domain has nonempty interior
+and assuming a Lipschitz continuous boundary. This is in contrast to the infinite-dimensional case, where
+compact domains necessarily have empty interior and where the convergence rate depends on the specific
+structure of the domain. To state our complexity bound for operator approximation we will therefore need
+to discuss the prototypical structure of compact subsets K⊂ X .
+1 Ignoring the potentially beneficial factor γ .
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 7 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 653
+To fix intuition we temporarily consider X a function space (for example, a Hölder, Lebesgue or
+Sobolev space). In this case, the most common way to define a compact subsetK⊂ X is via a smoothness
+constraint, as illustrated by the following concrete example:
+EXAMPLE 2.2. Assume that X = Cs(Ω) is the space of s-times continuously differentiable functions on
+a bounded domain Ω ⊂ Rd. Then, for ρ> s and upper bound M > 0, the subset K⊂ X , defined as
+K=
+{
+u∈ Cρ(Ω)
+⏐⏐∥u∥Cρ ≤ M
+}
+, (2.4)
+is a compact subset of X . Here, we define the Cρ -norm as
+∥u∥Cρ = max
+|ν|≤ρ
+sup
+x∈Ω
+|Dν u(x)|. (2.5)
+♦
+To better understand the approximation theory of operators S† : K ⊂ X → Y we would like to
+understand the structure of such K. Our point of view is inspired by Fourier analysis, according to which
+smoothness of u∈ K roughly corresponds to a decay rate of the Fourier coefficients of u. In particular,
+u is guaranteed to belong to the set ( 2.4), if u is of the form
+u= A
+∞∑
+j=1
+j−α yjej, yj ∈ [0, 1] for all j∈ N, (2.6)
+for a sufficiently large decay rate α> 0, small constant A > 0 and where ej : Rd → R denotes
+the periodic Fourier (sine/cosine) basis, restricted to Ω. We include a proof of this fact at the end of
+this subsection (see Lemma 2.7), where we also identify relevant decay rate α. In this sense the set K in
+(2.4) could be said to ‘contain’ an infinite-dimensional hypercube∏∞
+j=1[0, Aj−α ], with decay rateα. Such
+hypercubes will replace the finite-dimensional unit cube [0, 1]D in our analysis of operator approximation
+in infinite dimensions.
+We would like to point out that a similar observation holds for many other sets K defined by a
+smoothness constraint, such as sets in Sobolev spaces defined by a smoothness constraint, {∥u∥Hρ ≤
+M}⊂ Hs(Ω), or more generally {∥u∥Wρ,p ≤ M}⊂ Ws,p(Ω), for any 1 ≤ p ≤∞ , but also Besov
+spaces, spaces of functions of bounded variation and others share a similar structure. Bounded balls in
+all of these spaces contain infinite-dimensional hypercubes, consisting of elements of the form ( 2.6). We
+note in passing that, in general, it may be more natural to replace the trigonometric basis in (2.6)b ys o m e
+other choice of basis, such as polynomials, splines, wavelets or a more general (frame) expansion. We
+refer to e.g., Christensen et al. (2003); Heil (2010) for general background and Herrmann et al. (2024)
+for an example of such a setting in the context of holomorphic operators.
+The above considerations lead us to the following definition of an abstract hypercube:
+DEFINITION 2.3. Let e1, e2,··· ∈ X be a sequence of linearly independent and normed elements,
+∥ej∥X = 1. Given constants A > 0, α> 1, we say that K ⊂ X contains an infinite-dimensional
+cube Qα = Qα(A; e1, e2,...) , if the following hold:
+(1) K contains the set Qα consisting of all u of the form ( 2.6);
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 8 ===
+654 S. LANTHALER AND A. M. STUART
+(2) the set{ej}j∈N possesses a bounded bi-orthogonal sequence of functionals, labellede∗
+1, e∗
+2,···∈ X∗,
+in the continuous dual of X ,2 i.e., we assume that e∗
+k(ej)= δjk for all j, k∈ N, and that there exists
+M > 0, such that ∥e∗
+k∥X∗ ≤ M for all k∈ N.
+♦
+REMARK 2.4. Property (2) in Definition 2.3, i.e., the assumed existence of a bi-orthogonal sequence e∗
+j ,
+ensures that there exist ‘coordinate projections’: if u is of the form ( 2.6) then the jth coefficient yj can be
+retrieved from u as yj = A−1jα e∗
+j (u). This allows us to uniquely identify u∈ Qα with a set of coefficients
+(y1, y2, ...) ∈ [0, 1]∞. ♦
+REMARK 2.5. The decay rate α of the infinite-dimensional cube Qα ⊂ K provides a measure of its
+‘asymptotic size’ or ‘complexity’. In terms of our complexity bounds this decay rate will play a special
+role. Hence, we will usually retain this dependence explicitly by writing Q
+α , but suppress the additional
+dependence on A and e1, e2,... in the following text. ♦
+The notion of infinite-dimensional cubes introduced in Definition 2.3 is only a minor generalization
+of an established notion of cube embeddings, introduced by Donoho ( Donoho, 2001) in a Hilbert space
+setting. We refer to (Dahlke et al., 2015, chapter 5) for a pedagogical exposition of such cube embeddings
+in the Hilbert space setting, and their relation to the Kolmogorov entropy of K.
+REMARK 2.6. The complexity bounds established in this work will be based on infinite-dimensional
+hypercubes. An interesting question, left for future work, is whether our main result on the curse of
+parametric complexity, Theorem
+2.11, could be stated directly in terms of the Kolmogorov complexity
+of K, or other notions such as the Kolmogorov n-width (DeV ore, 1998). ♦
+Our definition of an infinite-dimensional hypercube is natural in view of the following lemma, the
+discussion following Example 2.2 and other similar results.
+LEMMA 2.7. Assume that X = Cs(Ω) is the space of s-times continuously differentiable functions on a
+bounded domain Ω ⊂ Rd. Choose ρ> s and define K, compact in X ,b y
+K=
+{
+u∈ Cρ(Ω)
+⏐⏐∥u∥Cρ ≤ M
+}
+,
+with constant M > 0. Then K contains an infinite-dimensional hypercube Qα , for any α> 1+ ρ−s
+d . ♦
+The proof of Lemma2.7 is included in AppendixA. While we have focused on spaces of continuously
+differentiable functions, similar considerations also apply to other smoothness spaces, such as the
+Sobolev spaces Ws,p, and more general Besov spaces.
+2.2.2 Curse of parametric complexity. The main question to be addressed in this section is the
+following: given K ⊂ X compact, S† : X → Y an r-times Fréchet differentiable operator to be
+approximated by a neural operator S : X → Y and given a desired approximation accuracy ϵ> 0
+how many tunable parameters (in the architecture of S) are required to achieve
+sup
+u∈K
+∥S†(u)− S(u)∥Y ≤ ϵ?
+2 If X is a Hilbert space such a bi-orthogonal sequence always exists for independent e1, e2,···∈ X .
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 9 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 655
+The answer to this question clearly depends on our assumptions on K ⊂ X , Y and the class of neural
+operators S.
+Assume K ⊂ X contains a hypercube Qα . Consistent with our discussion in the last subsection we
+will assume that K⊂ X contains an infinite-dimensional hypercube Qα , as introduced in Definition 2.3,
+with algebraic decay rate α> 0.
+Assume Y = R, i.e., S† is a functional. The approximation of an operator S† : X → Y with potentially
+infinite-dimensional output space Y is generally harder to achieve than the approximation of a functional
+S† : X → R with one-dimensional output; indeed, if dim(Y)≥ 1 then R can be embedded in Y and any
+functional X → R gives rise to an operator X → Y under this embedding. To simplify our discussion
+we will therefore initially restrict attention to the approximation of functionals, with the aim of showing
+that even the approximation of r-times Fréchet differentiable functionals is generally intractable.
+Assume S is of neural network-type. Assuming that Y = R we must finally introduce a rigorous
+notion of the relevant class of approximating functionals S : X → R, i.e., define a class of ‘neural
+operators/functionals’ approximating the functional S†.
+DEFINITION 2.8 (Functional of neural network-type). We will say that a (neural) functional S : X → R
+is a ‘functional of neural network-type’, if it can be written in the form
+S(u)= Φ(Lu), ∀ u∈ K, (2.7)
+where for some ℓ∈ N, L : X → Rℓ is a linear map, and Φ : Rℓ → R is an ReLU neural network
+(potentially sparse). ♦
+If S is a functional of neural network-type, we define the complexity of S, denoted cmplx(S),a st h e
+smallest size of a neural network Φ for which there exists linear map L such that a representation of the
+form (2.7) holds, i.e.,
+cmplx(S) := min
+Φ
+size(Φ), (2.8)
+where the minimum is taken over all possible Φ in (2.7).
+REMARK 2.9. Without loss of generality we may assume that ℓ≤ size(Φ) in (2.7) and (2.8). Indeed, if this
+is not the case then size (Φ) < ℓand we can show that it is possible to construct another representation
+pair (˜Φ, ˜L) in (2.7), consisting of a neural network ˜Φ : R˜ℓ→ R, linear map ˜L : X → R˜ℓ and such that
+˜ℓ≤ size(˜Φ): To see why let us assume that ˜ℓ := size(Φ) < ℓ.L e t A be the weight matrix in the first
+input layer of Φ. Since
+∥A∥0 ≤ ˜ℓ<ℓ ,
+at most˜ℓcolumns of A can be nonvanishing. Write the matrix A= [a1, a2,... , aℓ] in terms of its column
+vectors. Up to permutation we may assume that a˜ℓ+1 =···= aℓ= 0. We now drop the corresponding
+columns in the input layer ofΦ and remove these unused components from the output of the linear mapL
+in (2.7). This leads to a new map ˜L : X → R˜ℓ, with output components (˜Lu)j = (Lu)j for j= 1,... ,˜ℓ,
+and we define ˜Φ : R˜ℓ→ R, as the neural network that is obtained from Φ by replacing the input matrix
+A= [a1, ... , aℓ]b y˜A= [a1,... , a˜ℓ]. Then, ˜Φ◦ ˜L= Φ◦ L, so that ˜L and ˜Φ satisfy a representation of
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 10 ===
+656 S. LANTHALER AND A. M. STUART
+the form (2.7), but the dimension ˜ℓsatisfies˜ℓ= size(Φ)= size(˜Φ); the first equality is by definition of
+˜ℓ, and the last equality holds because we only removed zero weights from Φ. In particular, this ensures
+that˜ℓ≤ size(˜Φ) for this new representation, without affecting the size of the underlying neural network,
+i.e., size(Φ)= size(˜Φ). ♦
+More generally, we can consider Y = Y(Ω; Rp) a function space, consisting of functions v : Ω →
+Rp with domain Ω ⊂ Rd.G i v e ny∈ Ω, we introduce the point-evaluation map
+evy : Y → Rp,e v y(v) := v(y).
+Provided that point-evaluation evy is well-defined for all v∈ Y we can readily extend the above notion
+to operators, as follows:
+DEFINITION 2.10 (Operator of neural network-type). Let Y = Y(Ω; Rp) be a function space on which
+point-evaluation is well-defined. We will say that a (neural) operatorS : X → Y is an ‘operator of neural
+network-type’, if for any evaluation point y ∈ Ω, the composition ev y ◦ S : X → Rp,e vy(S(u)) :=
+S(u)(y), can be written in the form
+evy ◦ S(u)= Φy(Lu), ∀ u∈ K, (2.9)
+where L : X → Rℓ is a linear operator, and Φy : Rℓ→ Rp is an ReLU neural network that may depend
+on the evaluation point y∈ Ω. In this case, we define
+cmplx(S) := sup
+y∈Ω
+min
+Φy
+size(Φy).
+♦
+We next state our main result demonstrating a ‘curse of parametric complexity’ for functionals (and
+operators) of neural network-type. This is followed by a detailed discussion of the implications of this
+abstract result for four representative examples of operator learning frameworks: PCA-Net, DeepONet,
+NOMAD and the Fourier neural operator.
+2.3 Main theorem on curse of parametric complexity
+The following result formalizes an analogue of the CoD in infinite-dimensions:
+THEOREM 2.11 (Curse of parametric complexity). Let K⊂ X be a compact set in an infinite-dimensional
+Banach space X . Assume that K contains an infinite-dimensional hypercube Qα for some α> 1. Then,
+for any r ∈ N and δ> 0, there exists ϵ> 0 and an r-times Fréchet differentiable functional S† : K ⊂
+X → R, such that approximation to accuracy ϵ≤ ϵby a functional Sϵ of neural network-type,
+sup
+u∈K
+|S†(u)− Sϵ(u)|≤ ϵ, (2.10)
+implies complexity bound cmplx(Sϵ)≥ exp(cϵ−1/(α+1+δ)r); here c, ϵ> 0 are constants depending only
+on α, δ and r. ♦
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 11 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 657
+Before providing a sketch of the proof of Theorem 2.11 we note the following simple corollary,
+whose proof is given in Appendix A.4.
+COROLLARY 2.12. Let K⊂ X be a compact set in an infinite-dimensional Banach space X . Assume that
+K contains an infinite-dimensional hypercube Qα for some α> 1. Let Y = Y(Ω; Rp) be a function
+space with continuous embedding in C(Ω; Rp). Then, for any r∈ N and δ> 0, there exists ϵ> 0 and
+an r-times Fréchet differentiable functional S† : K ⊂ X → Y, such that approximation to accuracy
+ϵ≤ ϵby an operator Sϵ : X → Y of neural network-type,
+sup
+u∈K
+∥S†(u)− Sϵ(u)∥≤ϵ, (2.11)
+implies complexity bound cmplx(Sϵ)≥ exp(cϵ−1/(α+1+δ)r); here c, ϵ> 0 are constants depending only
+on α, δ and r. ♦
+Proof of Theorem 2.11 (Sketch). Let Sϵ : X → R be any functional of neural network-type, achieving
+approximation accuracy ( 2.10). In view of our definition of cmplx (Sϵ) in ( 2.8), to prove the claim, it
+suffices to show that if L : X → Rℓ is a linear map and Φ : Rℓ→ R is an ReLU neural network, such
+that
+Sϵ(u)= Φ(Lu), ∀ u∈ X ,
+then size(Φ)≥ exp(cϵ−1/(α+1+δ)r).
+The idea behind the proof of this fact is that if K⊂ X contains a hypercube Qα then for any D∈ N a
+suitable rescaling of the finite-dimensional cube [0, 1] D can be embedded in K. More precisely, for any
+D∈ N there exists an injective linear map ιD : [0, 1]D → K.
+If we now consider the composition Sϵ◦ιD : RD → R then we observe that we have a decomposition
+Sϵ◦ ιD(x)= Φ(L◦ ιD(x)), where
+L◦ ιD : RD → Rℓ,
+is linear, and
+Φ : Rℓ→ R
+is an ReLU neural network. In particular, there exists a matrix A∈ Rℓ×D, such that L◦ ιD(x)= Ax for
+all x ∈ RD, and the mapping ΦD(x) := Sϵ◦ ιD(x) defines an ReLU neural network ΦD(x) = Φ(Ax),
+whose size can be bounded by
+size(ΦD)≤ 2s i z e(Φ)+ 2∥A∥0 (Equation 2.2)
+≤ 2s i z e(Φ)+ 2ℓD
+≤ 2s i z e(Φ)+ 2s i z e(Φ)D (Remark 2.9)
+≤ 4s i z e(Φ)D.
+Using Proposition 2.1, for any D∈ N, we are then able to construct a functional FD : K⊂ X → R,
+mimicking the function fD : [0, 1] D ⊂ RD → R constructed in Proposition 2.1, and such that uniform
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 12 ===
+658 S. LANTHALER AND A. M. STUART
+approximation of FD by Sϵ (implying similar approximation of fD by ΦD) incurs a lower complexity
+bound
+size(Φ)≥ (4D)−1 size(ΦD)≥ CDϵ−γ D/r,
+where CD > 0 is a constant depending on D. For this particular functional FD, and given the uniform
+lower bound on size(Φ) above, it then follows that
+cmplx(Sϵ)≥ CDϵ−γ D/r.
+The first challenge is to make this strategy precise, and to determine theD-dependency of the constantCD.
+As we will see this argument leads to a lower bound of roughly the form cmplx (Sϵ) ≳ (Dr(1+α)ϵ)−γ D/r.
+At this point the argument is still for fixed D∈ N, and would only lead to an algebraic complexity
+in ϵ−1. To extend this to an exponential lower bound in ϵ−1 we next observe that if the estimate
+cmplx(Sϵ) ≳ (Dr(1+α)ϵ)−γ D/r could in fact be established for all D ∈ N simultaneously, i.e.,
+if we could construct a single functional S†, for which the lower complexity bound cmplx (Sϵ) ≳
+supD∈N(Dr(1+α)ϵ)−γ D/r were to hold, then setting D ≈ (eϵ)−1/(1+α)r on the right would imply that
+cmplx(Sϵ) ≳ sup
+D∈N
+(Dr(1+α)ϵ)−γ D/r ≳ exp
+(
+cϵ−1/(1+α)r
+⎞
+,
+with suitable c > 0. Leading to an exponential lower complexity bound for such S† the second main
+challenge is thus to construct a single S† : K ⊂ X → R that effectively ‘embeds’ an infinite family of
+functionals FD : K ⊂ X → R with complexity bounds as above. This will be achieved by defining S†
+as a weighted sum of suitable functionals FD. The detailed proof is provided in Appendix A3. □
+Several remarks are in order:
+REMARK 2.13. Theorem 2.11 shows rigorously that in general operator learning suffers from a curse of
+parametric complexity, in the sense that it is not possible to achieve better than exponential complexity
+bounds for general classes of operators, which are merely determined by their ( C
+r- or Lipschitz-)
+regularity. As explained above this is a natural infinite-dimensional analogue of the CoD in finite-
+dimensions (cp. Proposition 2.1), and motivates our terminology. We note that the lower bound of
+Theorem 2.11 qualitatively matches general upper bounds for DeepONets derived in Liu et al. (2024).
+It would be of interest to determine sharp rates. ♦
+REMARK 2.14. Theorem 2.11 is derived for ReLU neural networks. With some effort, the argument
+could be extended to more general, piecewise polynomial activation functions. While we believe that
+the curse of parametric complexity has a fundamental character, we would like to point out that, for
+nonstandard neural network architectures , algebraic approximation rates have been obtained ( Schwab
+et al. , 2023); these results build on either ‘superexpressive’ activation functions or other nonstandard
+architectures. Since these networks are not ordinary feedforward ReLU neural networks the algebraic
+approximation rates of
+Schwab et al. (2023) are not in contradiction with Theorem 2.11. While the
+parametric complexity of the nonstandard neural operators in Schwab et al. (2023) is exponentially
+smaller than the lower bound of Theorem2.11, it is conceivable that storing the neural network weights in
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 13 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 659
+practice would require exponential accuracy (number of bits), to account for the highly unstable character
+of super-expressive constructions. ♦
+REMARK 2.15. Theorem 2.11 differs from previous results on the limitations of operator learning
+frameworks, as e.g., addressed in Lanthaler et al. (2022); Seidman et al. (2022); Lanthaler et al. (2023b).
+Earlier work focuses on the limitations imposed by a linear choice of the reconstruction mapping R.I n
+contrast, the results of this work exhibit Ck-smooth operators and functionals, which are fundamentally
+hard to approximate by neural network-based methods (with ReLU activation), irrespective of the choice
+of reconstruction. ♦
+REMARK 2.16. We finally link our main theorem to a related result for PCA-Net (Lanthaler, 2023, theorem
+3.3), there derived in a complementary Hilbert space setting for X and Y; the result of Lanthaler (2023)
+shows that, for PCA-Net, no fixed algebraic convergence rate can be achieved in the operator learning
+of general Cr-operators between Hilbert spaces; this can be viewed as a milder version of the full curse
+of parametric complexity identified in this work, expressed by an exponential lower complexity bound
+in Theorem 2.11. ♦
+To further illustrate an implication of Theorem 2.11 we provide the following example:
+EXAMPLE 2.17 (Operator learning CoD). Let Ω ⊂ Rd be a domain. Let s,ρ∈ Z≥0 be given, with s <ρ ,
+and consider the compact set
+K=
+{
+u∈ Cρ(Ω)
+⏐⏐∥u∥Cρ ≤ 1
+}
+⊂ Cs(Ω).
+Fix r∈ N. By Lemma 2.7 K contains an infinite-dimensional hypercube Qα for any α> 1+ ρ−s
+d .F i x
+such α. Applying Theorem 2.11 it follows that there exists an r-times Fréchet differentiable functional
+S† : Cs(Ω) → R and constant c,ϵ> 0, such that any family Sϵ : Cs(Ω) → R of functionals of neural
+network-type, achieving accuracy
+sup
+u∈K
+|S†(u)− Sϵ(u)|≤ ϵ, ∀ϵ≤ ϵ,
+has complexity at least cmplx (Sϵ)≥ exp(cϵ−1/(1+α)r) for ϵ≤ ϵ. Furthermore, the constants c, ϵ> 0
+depend only on the parameters r, s,ρ,α. ♦
+In the next subsection we aim to show the relevance of the above abstract result for concrete neural
+operator architectures. Specifically, we show that three operator learning architectures from the literature
+are of neural network-type (PCA-Net, DeepONet, NOMAD), and relate our notion of complexity to the
+required number of tunable parameters for each. Finally, we show that even frameworks that are not
+necessarily of neural network-type could suffer from a similar curse of parametric complexity. We make
+this explicit for the Fourier neural operator in Subsection
+2.5.
+2.4 Examples of operators of neural network-type
+We describe three representative neural operator architectures and show that they can be cast in the above
+framework.
+PCA-Net. We start with the PCA-Net architecture from Bhattacharya et al. (2021), anticipated in
+the work Hesthaven & Ubbiali (2018) .I f X and Y are Hilbert spaces then a neural network can
+be combined with principal component analysis (PCA) for the encoding and reconstruction on the
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 14 ===
+660 S. LANTHALER AND A. M. STUART
+underlying spaces, to define a neural operator architecture termed PCA-Net; the ingredients of this
+architecture are orthonormal PCA bases φX
+1 ,... ,φX
+DX ∈ X and φY
+1 ,... ,φY
+DY ∈ Y, and a neural network
+mapping Ψ : RDX → RDY . The encoder E is obtained by projection onto the {φX
+j }DX
+j=1 , whereas the
+reconstruction R is defined by a linear expansion in {φY
+j }DY
+j=1. The resulting PCA-Net neural operator is
+defined as
+S(u)(y)=
+DY∑
+k=1
+Ψk(α1,... ,αDX )φY
+k (y), with αj :=⟨u,φX
+j ⟩, j= 1,... , DX . (2.12)
+Here, the neural networkΨ : RDX → RDY , with componentsΨk(· )= Ψk(· ; θ) , depends on parameters
+that are optimized during training of the PCA-Net. The PCA basis functions φY
+1 ,...φ Y
+DY : Ω → Rp,
+defining the reconstruction, are precomputed from the data using PCA analysis.
+Given an evaluation point y ∈ Ω the composition ev y ◦ S, between S and the point-evaluation
+mapping evy(v)= v(y), can now be written in the form
+evy ◦ S(u)= Φy(Lu),
+where L : X → RDX , Lu := (⟨u,φX
+1 ⟩,... ,⟨u,φX
+DX⟩is a linear mapping, and Φy(α) :=
+∑ DY
+k=1 Ψk(α)φY
+k (y),f o rf i x e dy, is the composition of a neural network Ψ with a linear read-out; thus, Φy
+is itself a neural network for fixed y. This shows that PCA-Net is of neural network-type.
+The following lemma shows that the complexity of PCA-Net gives a lower bound on the number of
+free parameters for the underlying neural network architecture.
+LEMMA 2.18 (Complexity of PCA-Net). Assume that X and Y are Hilbert spaces, so that PCA-Net is
+well-defined. Any PCA-Net S = R◦ Ψ ◦ E is of neural network-type, and
+size(Ψ )≥ (2p+ 2)−1cmplx(S),
+where the dimension p∈ N is fixed by the output-function space Y = Y(Ω; Rp). ♦
+Thus, Lemma 2.18 implies a lower complexity bound size (Ψ ) ≳ cmplx(S). The detailed proof is
+given in Appendix A.5.1. It thus follows from Corollary2.12 that operator learning with PCA-Net suffers
+from a curse of parametric complexity:
+PROPOSITION 2.19 (Curse of parametric complexity for PCA-Net). Assume the setting of Corollary 2.12,
+with X , Y being Hilbert spaces. Then, for any r∈ N and δ> 0, there exists ϵ> 0 and an r-times Fréchet
+differentiable functional S† : K ⊂ X → Y, such that approximation to accuracy ϵ≤ ϵb yaP C A - N e t
+Sϵ : X → Y
+sup
+u∈K
+∥S†(u)− Sϵ(u)∥≤ϵ, (2.13)
+with encoder E, neural network Ψ and reconstruction R, implies complexity bound size (Ψ ) ≥
+exp(cϵ−1/(α+1+δ)r); here c, ϵ> 0 are constants depending only on α, δ, r and p. ♦
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 15 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 661
+DeepONet. A conceptually similar approach is followed by the DeepONet of Lu et al. (2021b), which
+differs by learning the form of the representation in Y concurrently with the coefficients, and by allowing
+for quite general input linear functionals {αj}DX
+j=1 .
+The DeepONet architecture defines the encoding E : X → RDX by a fixed choice of general linear
+functionals ℓ1,... ,ℓDX ; these may be obtained, for example, by point evaluation at distinct ‘sensor
+points’ or by projection onto PCA modes as in PCA-Net. The reconstruction R : RDY → Y is defined
+by expansion with respect to a set of functions φ1,... ,φDY ∈ Y that are themselves finite-dimensional
+neural networks to be learned. The resulting DeepONet can be written as
+S(u)(y)=
+DY∑
+k=1
+Ψk(α1,... ,αDX )φk(y), with αj := ℓj(u), j= 1,... , DX . (2.14)
+Here, both the neural networks Ψ : RDX → RDY , with components Ψk = Ψk(· ; θ) , and φ : Ω →
+Rp×DY with components φk = φk(· ; θ) , depend on parameters that are optimized during training of the
+DeepONet.
+Given an evaluation pointy∈ Ω the composition evy◦S, with the point-evaluation mapping evy(v)=
+v(y), can again be written in the form
+evy ◦ S(u)= Φy(Lu),
+where L : X → RDX , Lu := (ℓ1(u),... ,ℓDX (u)) is linear, where
+Φy(α) :=
+DY∑
+k=1
+Ψk(α)φk(y),
+and for fixed y the values φk(y)∈ Rp are just (constant) vectors. Thus, Φy is the composition of a neural
+network Ψ with a linear read-out, and hence is itself a neural network. This shows that DeepONet is of
+neural network-type.
+The next lemma shows that the size can be related to the complexity of DeepONet: also in this case
+cmplx(S) provides a lower bound on the total number of nonzero degrees of freedom of a DeepONet.
+The detailed proof is provided in Appendix A.5.2.
+LEMMA 2.20 (Complexity of DeepONet). Any DeepONet S = R◦ Ψ ◦ E, defined by a branch-net Ψ
+and trunk-net φ, is of neural network-type, and
+2(size(Ψ )+ size(φ))≥ cmplx(S).
+♦
+The following result is now an immediate consequence of Corollary 2.12 and the above lemma.
+PROPOSITION 2.21 (Curse of parametric complexity for DeepONet). Assume the setting of Corollary 2.12.
+Then, for any r ∈ N and δ> 0, there exists ϵ> 0 and an r-times Fréchet differentiable functional
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 16 ===
+662 S. LANTHALER AND A. M. STUART
+S† : K⊂ X → Y, such that approximation to accuracy ϵ≤ ϵby a DeepONet Sϵ : X → Y
+sup
+u∈K
+∥S†(u)− Sϵ(u)∥≤ϵ, (2.15)
+with branch net Ψ and trunk net φ, implies complexity bound size(Ψ )+ size(φ)≥ exp(cϵ−1/(α+1+δ)r);
+here c, ϵ> 0 are constants depending only on α, δ and r. ♦
+NOMAD. The linearity in the reconstruction in Y for both PCA-Net and DeepONet imposes a
+fundamental limitation on their approximation capability ( Lanthaler et al., 2022; Seidman et al., 2022;
+Lanthaler et al., 2023b). To overcome this limitation nonlinear extensions of DeepONet have recently
+been proposed. The following NOMAD architecture ( Seidman et al., 2022) provides an example:
+NOMAD (NOnlinear MAnifold Decoder) employs encoding by point evaluation at a fixed set of
+sensor points, or more general linear functionals ℓ1,... ,ℓDX : X → R. The reconstruction R : RDY →
+Y in the output space Y = Y(Ω; Rp) is defined via a neural network Q : RDY × Ω → Rp, which
+depends jointly on encoded output coefficients in RDY and the evaluation point y ∈ Ω;a si nt h et w o
+previous examples, Ψ : RDX → RDY is again a neural network. The resulting NOMAD mapping, for
+u∈ X and y∈ Ω, is given by
+S(u)(y)= Q(Ψ (α1,... ,αDX ), y), with αj := ℓj(u), (2.16)
+for j= 1,... , DX . We note that the main difference between DeepONet and NOMAD is that the linear
+expansion in (2.14) has been replaced by a nonlinear composition with the neural networkQ. Both neural
+networks Ψ and Q are optimized during training.
+Given evaluation point y ∈ Ω the composition ev y ◦ S with the point-evaluation can be written in
+the form
+evy ◦ S(u)= Φy(Lu),
+where L : X → RDX , Lu := (ℓ1(u),... ,ℓDX (u)) is linear, and α ↦→ Φy(α) := Q(Ψk(α), y) defines a
+neural network for fixed y. This shows that NOMAD is of neural network-type. Finally, the following
+lemma provides an estimate on the complexity of NOMAD:
+LEMMA 2.22 (Complexity of NOMAD). Any NOMAD operator S = R◦Ψ◦ E defined by a branch-net
+Ψ and nonlinear reconstruction Q is of neural network-type, and
+2(size(Ψ )+ size(Q))≥ cmplx(S). (2.17)
+♦
+The expression on the left-hand side of ( 2.17) represents the total number of nonzero degrees of
+freedom in the NOMAD architecture and, as for PCA-Net and DeepONet, it is lower bounded by our
+notion of complexity. For the proof, we refer to Appendix A.5.3.
+The following result is now an immediate consequence of Corollary 2.12 and the above lemma.
+PROPOSITION 2.23 (Curse of parametric complexity for NOMAD). Assume the setting of Corollary 2.12.
+Then, for any r ∈ N and δ> 0, there exists ϵ> 0 and an r-times Fréchet differentiable functional
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 17 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 663
+S† : K ⊂ X → Y, such that approximation to accuracy ϵ ≤ ϵ by a NOMAD neural operator
+Sϵ : X → Y
+sup
+u∈K
+∥S†(u)− Sϵ(u)∥≤ϵ, (2.18)
+with neural networks Ψ and Q, implies complexity bound size (Ψ )+ size(Q) ≥ exp(cϵ−1/(α+1+δ)r);
+here c, ϵ> 0 are constants depending only on α, δ and r. ♦
+Discussion. For all examples above a general lower bound on the complexity cmplx (S) of operators of
+neural network-type implies a lower bound on the total number of degrees of freedom of the particular
+architecture. In particular, a lower bound on cmplx (S) gave a lower bound on the smallest possible
+number of nonzero parameters that are needed to implement S in practice. This observation motivates
+our nomenclature for the complexity.
+We emphasize that our notion of complexity only relates to the size of the neural network at the core
+of these architectures; by design, it does not take into account other factors, such as the additional com-
+plexity associated with the practical evaluation of inner products in the PCA-Net architecture, evaluation
+of linear encoding functionals of DeepONets or the numerical representation of an (optimal) output PCA
+basis for PCA-Net or neural network basis for DeepONet. The important point is that the aforementioned
+factors can only increase the overall complexity of any concrete implementation; correspondingly, our
+proposed notion of cmplx (S), which neglects some of these additional contributions, can be used to
+derive rigorous lower bounds on the overall complexity of any implementation.
+REMARK 2.24. In passing, we point out similar approaches ( Hua & Lu , 2023; Zhang et al. , 2023;
+Lanthaler et al., 2023b; Patel et al., 2024) to the PCA-Net, DeepONet and NOMAD architectures, which
+share a closely related underlying structure to the examples given above. We fully expect that the curse
+of parametric complexity applies to all of these architectures. ♦
+In the next Subsection 2.5 we will show that, even for operator architectures that are not of neural
+network-type according to the above definition, we may nevertheless be able to link them with an
+associated operator of neural network-type. Specifically, we will show this for the FNO in Theorem2.27.
+There, we will see that the size (number of tunable parameters) of the FNO can be linked to the
+complexity of an associated operator of neural network-type. And hence lower bounds on the complexity
+of operators of neural network-type imply corresponding lower bounds on the FNO.
+2.5 The curse of (parametric) complexity for fourier neural operators
+The definition of operators of neural network-typeintroduced in the previous subsection does not include
+the FNO, a widely adopted neural operator architecture. However, in this subsection we show that a result
+similar to Theorem 2.11, stated as Theorem 2.27, can be obtained for the FNO.
+Due to intrinsic constraints on the domain on which FNO can be (readily) applied we will assume
+that the spatial domain Ω = ∏d
+j=1[aj, bj]⊂ Rd is rectangular. We recall that an FNO,
+S : X(Ω; Rk)→ Y(Ω; Rp),
+can be written as a composition, S = Q◦ LL◦···◦ L1◦ P, of a lifting layer P, hidden layers L1,... , LL
+and an output layer Q. In the following text let us denote by V(Ω; Rdv ) a generic space of functions from
+Ω to Rdv .
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 18 ===
+664 S. LANTHALER AND A. M. STUART
+The nonlinear lifting layer
+P : X(Ω; Rk)→ V(Ω; Rdv ), u(x)↦→ χ( x, u(x)),
+is defined by a neural network χ : Ω× Rk → Rdv , depending jointly on the evaluation point x ∈ Ω
+and the components of the input function u evaluated at x, namely u(x)∈ Rk. The dimension dv is a free
+hyperparameter, and determines the number of ‘channels’ (or the ‘lifting dimension’).
+Each hidden layer Lℓ, ℓ= 1,... , L, of an FNO is of the form
+Lℓ : V(Ω; Rdv )→ V(Ω; Rdv ), v↦→ σ
+(
+Wℓv+ Kℓv+ bℓ
+⎞
+,
+where σ is a nonlinear activation function applied componentwise, Wℓ ∈ Rdv×dv is a matrix, the bias
+bℓ∈ V(Ω; Rdv ) is a function and Kℓ : V(Ω; Rdv )→ V(Ω; Rdv ) is a nonlocal operator defined in terms
+of Fourier multipliers,
+Kv(x)= F−1(ˆTk[Fv]k)(x),
+where [Fv]k denotes the kth Fourier coefficient ofv for k∈ Zd,ˆTk ∈ Cdv×dv is a Fourier multiplier matrix
+indexed by k and F−1 denotes the inverse Fourier transform. In practice, a Fourier cut-off kmax ∈ Z
+is introduced, and only a finite number of Fourier modes 3 ∥k∥ℓ∞ ≤ kmax is retained. In particular,
+the number of nonzero components of ˆT ={ ˆTk}k∈Zd is bounded by ∥ˆT∥0 ≤ d2
+v(2kmax + 1)d.I nt h e
+following text we will also assume that the bias functions bℓ are determined by their Fourier components
+[ˆbℓ]k ∈ Cdv ,∥k∥ℓ∞ ≤ kmax.
+Finally, the output layer
+Q : V(Ω; Rdv )→ Y(Ω; Rp), v↦→ q(x, v(x)),
+is defined in terms of a neural network q : Ω× Rdv → Rp, a joint function of the evaluation point x∈ Ω
+and the components of the output v of the previous layer evaluated at x, namely v(x)∈ Rdv .
+To define the size of an FNO we note that its tunable parameters are given by (i) the weights and
+biases of the neural network χ defining the lifting layer R, (ii) the components of the matrices Wℓ ∈
+Rdv×dv , (iii) the components of the Fourier multipliers ˆTk ∈ Cdv×dv for∥k∥ℓ∞ ≤ kmax, (iv) the Fourier
+coefficients [ˆbℓ]k ∈ Cdv ,f o r∥k∥ℓ∞ ≤ kmax, and (v) the number of weights and biases of the neural
+network q defining the output layer Q. Given an FNO S : X(Ω; Rk)→ Y(Ω; Rp) we define size(S) of
+an FNO as the total number of nonzero parameters in this construction. We also follow the convention
+that for a matrix (or vector) A with complex entries the number of parameters is defined as ∥A∥0 =
+∥Re(A)∥0 +∥Im(A)∥0.
+REMARK 2.25 (FNO approximation of functionals). If S† : X(Ω; Rk) → R is a (scalar-valued)
+functional then we will again identify the output-space Y(Ω; Rp) with a space of constant functions. In
+this case, it is natural to add an averaging operation after the last output layerQ : V(Ω; Rdv )→ Y(Ω; R),
+3 Throughout this paper∥·∥ℓ∞ denotes the maximum norm on finite-dimensional Euclidean space.
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 19 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 665
+i.e., we replace Q by ˜Q : V(Ω; Rdv )→ R, given by
+˜Q(v) := 1
+|Ω|
+∫
+Ω
+q(x, v(x)) dx. (2.19)
+This does not introduce any additional degrees of freedom, and ensures that the output is constant. We
+also note that ( 2.19) is a special case of a Fourier multiplier K, involving only the k= 0 Fourier mode.
+♦
+In the following text we will restrict attention to the approximation of functionals, taking into account
+Remark 2.25. We first mention the following result, proved in Appendix A.6, which shows that FNOs
+are not of neural network-type, in general:
+LEMMA 2.26. Let σ be the ReLU activation function. Let T≃[0, 2π ] denote the 2π -periodic torus. The
+FNO,
+S : L2(T; R)→ R, S(u) :=
+∫
+Ω
+σ( u(x)) dx,
+is not of neural network-type. ♦
+The fact that FNO is not of neural network-type is closely related to the fact that the Fourier
+transforms at the core of the FNO mapping S : X(Ω; Rk)→ R cannot be computed exactly. In practice,
+the FNO therefore needs to be discretized.
+A simple discretization SN of S is readily obtained and commonly used in applications of FNOs. To
+this end fix N ∈ N, and let xj1,...,jd ∈ Ω, j1,... , jd ∈{ 1,... , N} be a grid consisting of N equidistant
+points in each coordinate direction. A numerical approximation SN : X(Ω; Rk)→ R of S is obtained
+by replacing the Fourier transform F and its inverse F−1 in each hidden layer by the discrete Fourier
+transform FN and its inverse F−1
+N , computed on the equidistant grid. Similarly, the exact average ( 2.19)
+is replaced by an average over the grid values. This ‘discretized’ FNO SN thus defines a mapping
+SN : X(Ω; Rk)→ R, u↦→ SN(u),
+which depends only on the grid values u(xj1,...,jd ) ∈ Rk of the input function u, for multi-indices
+(j1, ... , jd)∈{ 1,... , N}d. In contrast to S the discretization SN is readily implemented in practice. We
+expect that SN(u)≈ S(u) for sufficiently large N. Note also that size (SN)= size(S) by construction.
+Given these preparatory remarks we can now state our result on the curse of parametric complexity
+for FNOs, with proof in Appendix A7.
+THEOREM 2.27. Let Ω ⊂ Rd be a cube. Let K ⊂ X be a compact subset of a Banach space X =
+X(Ω; Rk). Assume that K contains an infinite-dimensional hypercube Qα for some α> 1. Then, for any
+r∈ N and δ> 0, there exists ϵ> 0 and an r-times Fréchet differentiable functional S† : K⊂ X → R,
+such that approximation to accuracy ϵ≤ ϵby a discretized FNO SNϵ
+ϵ ,
+sup
+u∈K
+|S†(u)− SNϵ
+ϵ (u)|≤ ϵ,
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 20 ===
+666 S. LANTHALER AND A. M. STUART
+requires either (i) complexity bound size (SNϵ
+ϵ ) ≥ exp(cϵ−1/(α+1+δ)r), or (ii) discretization parameter
+Nϵ≥ exp(cϵ−1/(α+1+δ)r); here c, ϵ> 0 are constants depending only on α, δ and r. ♦
+Proof (Sketch). The proof of Theorem 2.27 relies on the curse of parametric complexity for operators
+of neural network-type in Theorem 2.11. The first step is to show that discrete FNOs are of neural
+network-type. As a consequence, Theorem 2.11 implies a lower bound of the form cmplx (SNϵ
+ϵ ) ≥
+exp(cϵ−1/(α+1+δ)r). The main additional difficulty is that the discrete FNO is not a standard ReLU
+neural network according to our definition, since it employs a very nonstandard architecture involving
+convolution and Fourier transforms. Hence, more work is needed, in order to relate cmplx (SNϵ
+ϵ ) to
+size(SNϵ
+ϵ ); while the complexity is the minimal number of parameters required to represent SNϵ
+ϵ by an
+ordinary ReLU network architecture, we recall that the size(SNϵ
+ϵ ) is defined as the number of parameters
+defining SNϵ
+ϵ via the nonstandard FNO architecture. Our analysis leads to an upper bound of the form
+cmplx(SNϵ
+ϵ ) ≲ N2d
+ϵ size(SNϵ
+ϵ ). (2.20)
+As a consequence of the exponential lower bound, cmplx (SNϵ
+ϵ )≥ exp(cϵ−1/(α+1+δ)r), inequality (2.20)
+implies that either Nϵ or size(SNϵ
+ϵ ) have to be exponentially large in ϵ−1, proving the claim. For the
+detailed proof we refer to Appendix A7. □
+REMARK 2.28. We would like to point out that the additional factor in ( 2.20), depending on Nϵ, is natural
+in view of the fact that even a linear discretized FNO layer v ↦→ Wv, with matrix W ∈ Rdv×dv ,
+actually corresponds to a mapping RNd
+ϵ×dv → RNd
+ϵ×dv , (v(xj1,...,jd )) ↦→ (Wv(x)j1,...,jd ), i.e., the matrix
+multiplication should be viewed as being carried out in parallel at all Nd
+ϵ grid points. Representing this
+mapping by an ordinary matrix multiplication RNdϵ×dv → RNdϵ×dv requires Nd
+ϵ∥W∥0 degrees of freedom,
+and thus depends on Nϵ in addition to the number of FNO parameters ∥W∥0. ♦
+REMARK 2.29. Theorem 2.27 shows that FNO suffers from a similar curse of complexity as do the variants
+on DeepONet and PCA-Net covered by Theorem 2.11: approximation to accuracy ϵof general ( Cr-o r
+Lipschitz-) operators requires either an exponential number of nonzero degree of freedom, or requires
+exponential computational resources to evaluate even a single forward pass. We note the difference in
+how the curse is expressed in Theorem
+2.27 compared with Theorem 2.11; this is due to the fact that FNO
+is not of neural network-type (see Lemma 2.26). Instead, as outlined in the proof sketch above, only upon
+discretization does the FNO define an operator/functional of neural network type. The computational
+complexity of this discretized FNO is determined by both the FNO coefficients and the discretization
+parameter N. ♦
+2.5.1 Discussion. To overcome the general curse of parametric complexity implied by Theorem 2.11
+(and Theorem 2.27) efficient operator learning frameworks therefore have to leverage additional structure
+present in the operators of interest, going beyond Cr- or Lipschitz-regularity. Previous work on
+overcoming the curse of parametric complexity for operator learning has mostly focused on operator
+holomorphy (Schwab & Zech, 2019 ; Herrmann et al., 2020; Lanthaler et al., 2022) and the emulation
+of numerical methods ( Kovachki et al. , 2021 ; Deng et al. , 2022 ; Lanthaler et al. , 2022 )a st w ob a s i c
+mechanisms for overcoming the curse of parametric complexity for specific operators of interest. An
+abstract characterization of the entire class of operators that allow for efficient approximation by neural
+operators would be very desirable. Unfortunately, this appears to be out of reach, at the current state of
+analysis. Indeed, as far as the authors are aware, there does not even exist such a characterization for
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 21 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 667
+any class of standard numerical methods, such as finite difference, finite element or spectral, viewed as
+operator approximators.
+The second contribution of this work is to expose additional structure, different from holomorphy
+and emulation, that can be leveraged by neural operators. In particular, in the remainder of this paper
+we identify such structure in the HJ equations, and propose a neural operator framework that can build
+on this structure to provably overcome the curse of parametric complexity in learning the associated
+solution operator.
+3. The HJ equation
+In the previous section we demonstrate that, generically, a scaling-limit of the curse of dimensionality
+is to be expected in operator approximation, if only Cr− regularity of the map is assumed. However, we
+also outlined in the introduction the many cases where specific structure can be exploited to overcome
+this curse. In the remainder of the paper we show how the curse can be removed for HJ equations. To this
+end we start, in this section, by setting up the theoretical framework for operator learning in this context.
+We are interested in deriving error and complexity estimates for the approximation of the solution
+operator S†
+t : Cr
+per(Ω) → Cr
+per(Ω) associated with the following HJ PDE:
+{∂tu+ H(q,∇qu)= 0,(x, t)∈ Ω× (0, T],
+u(t= 0)= u0,(x, t)∈ Ω×{ 0}.
+(HJ)
+To simplify our analysis we consider only the case of a domain Ω = [0, 2π ]d with periodic boundary
+conditions (so that we may identify Ω with Td). We denote byCr
+per(Ω) the space of r-times continuously
+differentiable real-valued functions with 2π -periodic derivatives, with norm
+∥u∥Cr(Ω) := sup
+|α|≤r
+sup
+x∈Ω
+|Dα u(x)|.
+By slight abuse of notation we will similarly denote byu(q, t)∈ Cr
+per(Ω×[0, T]) and H(q, p)∈ Cr
+per(Ω×
+Rd) functions that have Cr regularity in all variables, and that are periodic in the first variable q∈ Ω,s o
+that in particular,
+q↦→ u(q, t) and q↦→ H(q, p),
+belong to Cr
+per(Ω),f o rf i x e dp∈ Rd or t∈ [0, T].
+In equation ( HJ) u : Ω × [0, T] → R, (q, t) ↦→ u(q, t) is a function, depending on the spatial
+variable q∈ Ω and on time t≥ 0. We will restrict attention to problems for which a classical solution
+u ∈ Cr
+per(Ω× [0, T]), r ≥ 2, exists. In this setting the initial value problem ( HJ) can be solved by the
+method of characteristics and a unique solution may be proved to exist for some T = T(u0)> 0. We
+may then define solution operator S†
+t with property u(·, t) = S†
+t (u0); the maximal time T of existence
+will, in general, depend on the input u0 to St. The next two subsections describe, respectively, the method
+of characteristics and the existence of the solution operator on a time-interval t ∈ [0, T], for all initial
+data from compact F in Cr
+per(Ω),f o r r ≥ 2. Thus, we define {S†
+t : F ⊂ Cr
+per(Ω) → Cr
+per(Ω)} for all
+t∈ [0, T], T = T(F) sufficiently small.
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 22 ===
+668 S. LANTHALER AND A. M. STUART
+We recall that throughout this paper, use of a superscript † denotes an object defined through
+construction of an exact solution of ( HJ), or objects used in the construction of the solution; identical
+notation without a superscript † denotes an approximation of that object.
+3.1 Method of characteristics for (HJ).
+We briefly summarize this methodology; for more details see ( Evans, 2010, section 3.3). Consider the
+following Hamiltonian system for t↦→ (q(t), p(t))∈ Ω× Rd defined by
+{˙q=∇ pH(q, p), q(0)= q0,
+˙p=−∇ qH(q, p), p(0)= p0,
+(3.1a)
+p0 =∇ qu0(q0). (3.1b)
+If the solution u(q, t) of ( HJ) is twice continuously differentiable then u can be evaluated by solving
+the ordinary differential equation (ODE) ( 3.1a) with the specific parameterized initial conditions ( 3.1b).
+Given these trajectories and t ≥ 0, the values u(q(t), t) can be computed in terms of the ‘action’ along
+this trajectory:
+u(q(t), t)= u0(q0)+
+∫t
+0
+L(q(t), p(t)) dτ , (3.2)
+where L : Ω× Rd → R is the Lagrangian associated with H, i.e.,
+L(q, p) := p·∇ pH(q, p)− H(q, p). (3.3)
+Equivalently, the solution z(t)= u(q(t), t) can be expressed in terms of the solution of the following
+system of ODEs, t↦→ (q(t), p(t), z(t)):
+⎧
+⎪⎪⎨
+⎪⎪
+⎩
+˙q=∇
+pH(q, p), q(0)= q0,
+˙p=−∇ qH(q, p), p(0)= p0,
+˙z= L(q, p), z(0)= z0.
+(3.4a)
+p0 =∇ qu0(q0), z0 = u0(q0). (3.4b)
+The system of ODEs ( 3.4) is defined on Ω× Rd× R, with a 2π -periodic spatial domain Ω = [0, 2π ]d.
+It can be shown that
+p(t)≡∇ qu(q(t), t),f o r t≥ 0, (3.5)
+tracks the evolution of the gradient of u along this trajectory. To ensure the existence of solutions to
+(3.1), i.e., to avoid trajectories escaping to infinity, we make the following assumption on H, in which
+|·| denotes the Euclidean distance on Rd:
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 23 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 669
+ASSUMPTION 3.1 (Growth at Infinity). There exists LH > 0, such that
+sup
+q∈Ω
+{
+−p·∇ qH(q, p)
+}
+≤ LH(1+| p|2), (3.6)
+for all p∈ Rd. ♦
+In the following text we will denote by
+{
+Ψ †
+t : Ω× Rd × R→ Ω× Rd × R,
+(q0, p0, z0)↦→ (q(t), p(t), z(t)),
+(3.7)
+the semigroup (flow map) generated by the system of ODEs ( 3.4a); existence of this semigroup, and
+hence of the solution operator S†
+t , is the topic of the next subsection.
+3.2 Short-time existence of C r-solutions
+The goal of this section is to show that for any r≥ 2, and for any compact subset F ⊂ Cr
+per(Ω), there
+exists a maximal T∗ = T∗(F)> 0, such that for any u0 ∈ F there exists a solution u : Ω× [0, T∗)→ R
+of (HJ), with property q↦→ u(q, t) belongs to Cr
+per(Ω) for all t∈ [0, T∗). Thus, we may take any T < T∗
+in (HJ), for data in F. Our proof of this fact relies on the Banach space version of the implicit function
+theorem; see Appendix B, Theorem B1, for a precise statement.
+In the following text, given t ≥ 0 and given initial values (q0, p0)∈ Ω× Rd, we define qt(q0, p0),
+pt(q0, p0) as the spatial- and momenta-components of the solution of the Hamiltonian ODE ( 3.1a),
+respectively; i.e., the solution of ( 3.1a) is given by t ↦→ (qt(q0, p0), pt(q0, p0)) for any initial data
+(q0, p0)∈ Ω× Rd.
+PROPOSITION 3.2 (Short-time existence of classical solutions). Let Assumption 3.1 hold, let r ≥ 2 and
+assume that the Hamiltonian H ∈ Cr+1
+per (Ω× Rd). Then, for any compact subset F ⊂ Cr
+per(Ω), there
+exists T∗ = T∗(F)> 0 such that for any u0 ∈ F there exists a classical solution u ∈ Cr
+per(Ω ×
+[0, T∗)) of the Hamilton–Jacobi equation ( HJ). Furthermore, for any T < T∗, there exists a constant
+C= C(T, r, F, H)> 0 such that sup t∈[0,T]∥u(· , t)∥Cr ≤ C. ♦
+The proof, which may be found in Appendix B, uses the following two lemmas, also proved in
+Appendix B. The first result shows that, under Assumption3.1, the semigroupΨ †
+t in (3.7) is well defined,
+globally in time.
+LEMMA 3.3. Let H ∈ Cr
+per(Ω× Rd) for r ≥ 1. Let Assumption 3.1 hold. Then, the mapping Ψ †
+t given
+by (3.7) exists for any t≥ 0 and t↦→ Ψ †
+t defines a semigroup. In particular, for any (q0, p0)∈ Ω× Rd,
+there exists a solution t↦→ (q(t), p(t)) of the ODE system ( 3.1a) with initial data q(0)= q0, p(0)= p0,
+for all t≥ 0. ♦
+The following result will be used to show that the method of characteristics can be used to construct
+solutions, at least over a sufficiently short time-interval.
+LEMMA 3.4. Let Assumption 3.1 hold, let r≥ 2 and assume that the Hamiltonian H ∈ Cr+1
+per (Ω× Rd).
+Let F ⊂ Cr
+per(Ω) be compact. Then, there exists a (maximal) time T∗ = T∗(F)> 0, such that for all
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 24 ===
+670 S. LANTHALER AND A. M. STUART
+u0 ∈ F,t h espatial characteristic mapping
+Φ†
+t (· ; u0) : Ω → Ω, q0 ↦→ qt
+(
+q0,∇qu0(q0)
+⎞
+,
+defined by (3.1) on the periodic domain Ω = [0, 2π ]d,i sa Cr−1-diffeomorphism for any t∈ [0, T∗). ♦
+Note that the map Φ†
+t (· ; u0) is defined by the semigroup Ψ †
+t for (q, p, z); however it only requires
+solution of the Hamiltonian system (3.1)f o r(q, p). In contrast to the flowmapΨ †
+t the spatial characteristic
+map Φ†
+t (· ; u0) is in general only invertible over a sufficiently short time-interval, leading to a correspond-
+ing short-time existence result for the solution operator S†
+t associated with ( HJ) in Proposition 3.2.
+3.3 Limitations of the setting considered in this work
+In this paper we study the curse of parametric complexity for operator learning, and discuss settings
+where it can be overcome. The primary role of our study of HJ equations is to highlight a setting
+where operator learning does not suffer from this curse. However, our analysis is restricted to the
+setting of smooth solutions and nonintersecting characteristics. We close this section on HJ equations by
+highlighting this important limitation of this work, and mention a possible extension.
+The main limitation of this work is the assumption that classical solutions of ( HJ) exist. Indeed, it
+is well known, e.g., Albano & Cannarsa (2002) ; Albano et al. (2020), that classical solutions of the HJ
+equations can develop singularities in finite time due to the potential crossing of the spatial characteristics
+q(t) emanating from different points; indeed, if two spatial characteristics emanating fromq0 and q′
+0 cross
+in finite time then (3.2) does not lead to a well-defined function u(q, t), and the method of characteristics
+breaks down. Thus, our existence theorem is generally restricted to a finite time interval [0, T∗].
+In certain special cases the crossing of characteristics is ruled out, and classical solutions exist for
+all time, i.e., with T∗ =∞ . One such example is the advection equation with velocity field v(q), and
+corresponding Hamiltonian H(q,∇qu)= v(q)·∇qu, for which the complexity of operator approximation
+is studied computationally in de Hoop et al. (2022).
+Finding more general conditions for the existence of classical solutions is a delicate question, which
+is discussed in Barron et al. (1999); under certain convexity assumptions on the Hamiltonian it is possible
+to relate the existence of a classical solution of ( HJ) to its time-reversibility. For example, it is shown
+in ( Barron et al. , 1999 , theorem 2.5) that if H(q, p) is (i) strictly convex and superlinear in p, and
+(ii) Lipschitz in q, and u(x, t) is a locally Lipschitz continuous (viscosity) solution of ( HJ) both forward
+and backward in time then u must be smooth. Under certain technical assumptions on the convexity of
+H and the initial data u(t= 0) it can in fact be shown ( Barron et al., 1999) that a forward solution u(x, t)
+and a backward solution w(x, t) of ( HJ) must be equal everywhere, provided that they coincide at the
+endpoints, i.e., u(x, T)= w(x, T) and u(x,0)= w(x,0)⇒ u≡ w and u, w∈ C1([0, T]× Rd).
+The existence of classical characteristics will play a fundamental role in the neural network-based
+approach to be developed in the next section. An interesting question for future work is whether classical
+characteristics could be replaced by a suitable notion of generalized characteristics, as studied in
+Albano
+& Cannarsa (2002); Albano et al. (2020). The main challenge in such an extension is the nonuniqueness
+of generalized characteristics; it is not immediately clear whether a neural network-based approach can
+coherently approximate such generalized characteristics when there is ap r i o r ino flow map (q
+t, pt) =
+φt(q0, p0) in the classical sense. In contrast, if such a flow map exists then this represents sufficient
+structure to beat the curse of parametric complexity, as shown in the following section.
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 25 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 671
+4. HJ neural operator: HJ-Net
+In this section we will describe an operator learning framework to approximate the solution operator
+S†
+t defined by ( HJ) for initial data u0 ∈ Cr
+per(Ω) with r ≥ 2. The main motivation for our choice of
+framework is the observation that the flow map Ψ †
+t associated with the system of ODEs ( 3.4a) can be
+computed independently of the underlying solution u . Hence, an operator learning framework for ( HJ)
+can be constructed based on a suitable approximation Ψt ≈ Ψ †
+t , where Ψt : Ω× Rd× R→ Ω× Rd× R
+is a neural network approximation of the flow Ψ †
+t . Given such Ψt, and upon fixing evaluation points
+{qj
+0}N
+j=1 ⊂ Ω, we propose to approximate the forward operator S†
+t of the Hamilton–Jacobi equation (HJ)
+by St, using the following three steps:
+Step (a) encode the initial data u0 ∈ Cr
+per(Ω) by evaluating it at the points qj
+0:
+E : Cr
+per(Ω) → [Ω× Rd × R]N ,
+u0 ↦→{ (qj
+0, pj
+0, zj
+0)}N
+j=1,
+with (qj
+0, pj
+0, zj
+0) := (qj
+0,∇qu0(qj
+0), u0(qj
+0));
+Step (b) for each j = 1,... , N, apply the approximate flow Ψt : Ω× Rd × R to the encoded data,
+resulting in a map
+Ψ N
+t :[ Ω× Rd × R]N → [Ω× Rd × R]N ,
+{(qj
+0, pj
+0, zj
+0)}N
+j=1 ↦→{ (qj
+t, pj
+t, zj
+t)}N
+j=1,
+where (qj
+t, pj
+t, zj
+t) := Ψt(qj
+0, pj
+0, zj
+0),f o r j= 1,... , N;
+Step (c) approximate the underlying solution at a fixed time t ∈ [0, T], for T sufficiently small, by
+interpolating the data (input/output pairs) {(qj
+t, zj
+t)}N
+j=1, leading to a reconstruction map:
+R :[ Ω× R]N → Cr(Ω),
+{(qj
+t, zj
+t)}↦→ sz,Q.
+If we let P denote the projection map, which takes [ Ω × Rd × R]N to [Ω × R]N , then, for fixed
+T sufficiently small, we have defined an approximation of S†
+t : Cr
+per(Ω) → Cr
+per(Ω), denoted St :
+Cr
+per(Ω) → Cr(Ω), and defined by
+St = R◦ P◦ Ψ N
+t ◦ E. (4.1)
+It is a consequence of Proposition 3.2 that our approximation St is well defined for all inputs u0 from
+compact subset F ⊂ Cr
+per(Ω), r≥ 2, in some interval t∈ [0, T], for T sufficiently small. However, the
+resulting approximation does not obey the semigroup property with respect to t and should be interpreted
+as holding for a fixedt∈ [0, T], T sufficiently small. Furthermore, iterating the map obtained for any such
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 26 ===
+672 S. LANTHALER AND A. M. STUART
+fixed t is not in general possible unless St maps F into itself. The requirement that S†
+t maps F into itself
+would also be required to prove the existence of a semigroup for ( HJ); for our operator approximator St
+we would additionally need to ensure periodicity of the reconstruction step, something we do not address
+in this paper.
+If the underlying solution u(q, t) of ( HJ)e x i s t su pt ot i m et, and if it is C2 then the method of
+characteristics can be applied, and the above procedure would reproduce the underlying solution, in
+the absence of approximation errors in Steps (b) and (c), i.e., in the absence of approximation errors of
+the Hamiltonian flow Ψt ≈ Ψ †
+t , and in the absence of reconstruction errors. We will study the effect of
+approximating Step (b) by use of an ReLU neural network approximation of the flow Ψ †
+t and by use
+of a moving least squares interpolation for Step (c). In the following two subsections we define these
+two approximation steps, noting that doing so leads to a complete specification of St. This complete
+specification is summarized in the final Subsection 4.3.
+4.1 Step (b) ReLU network
+We seek an approximation Ψt to Ψ †
+t in the form of an ReLU neural network ( 2.1), as summarized in
+Section 2.1.1, with input and output dimensions DX = DY = 2d+ 1, and taking the concatenated input
+x := (q0, p0, z0) ∈ Ω× Rd × R to its image in Rd × Rd × R.W eu s e2 π -periodicity to identify the
+output in the first d components (the spatial variable q) with a unique element in Ω = [0, 2π ]d. With
+slight abuse of notation this results in a well-defined mapping
+Ψt : Ω× Rd × R→ Ω× Rd × R, (q0, p0, z0)→ Ψt(q0, p0, z0).
+Let μ denote a probability measure on Ω× Rd× R. We would like to choose θ to minimize the loss
+function
+L(θ) = E(q,p,z)∼μ∥Ψt(q, p, z; θ)− Ψ †
+t (q, p, z)∥.
+In practice, we achieve this by an empirical approximation ofμ, based on N i.i.d. samples, and numerical
+simulation to approximate the evaluation of Ψ †
+t (· ) on these samples. The resulting approximate
+empirical loss can be approximately minimized by stochastic gradient descent (Robbins & Monro, 1951;
+Goodfellow et al., 2016), for example.
+4.2 Step (c) moving least squares
+In this section we define the interpolation mapping R :{qj
+t, zj
+t}N
+j=1 ↦→ u(· , t), employing reconstruction
+by moving least squares ( Wendland, 2004). In general, given a function f † : Ω → R,h e r ea s s u m e dt o
+be defined on the domain Ω = [0, 2π ]d, and given a set of (scattered) data {qj, zj}N
+j=1, where zj = f †(qj)
+for Q={ q1, ... , qN}⊂ Ω, the method of moving least squares produces an approximation fz,Q ≈ f †,
+which is given by the following minimization ( Wendland, 2004, definition 4.1):
+fz,Q,n(q)= min
+⎧
+⎨
+⎩
+N∑
+j=1
+[
+zj − P(qj)
+]2
+φδ(q− qj)
+⏐⏐
+⏐⏐⏐
+⏐
+P∈ π
+n
+⎫
+⎬
+⎭. (4.2)
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 27 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 673
+Here, πn denotes the space of polynomials of degree n, and φδ(q)= φ(q/δ) is a compactly supported,
+non-negative weight function. In the following text we will choose n := r− 1, where r is the degree of
+smoothness of f † ∈ Cr(Ω). We will assume φ(· ) to be smooth, supported in the unit ball B1(0), and
+positive on the ball B1/2(0) with radius 1/2.
+The approximation error incurred by moving least squares can be estimated in the L∞-norm, in terms
+of suitable measures of the ‘density’ of the scattered data points qj, and the smoothness of the underlying
+function f † (Wendland, 2004). The relevant notions are defined next, in which|·| denotes the Euclidean
+distance on Ω ⊂ Rd.
+DEFINITION 4.1. The fill distance of a set of pointsQ={ q1,... , qN}⊂ Ω for a bounded domainΩ ⊂ Rd
+is defined to be
+hQ,Ω := sup
+q∈Ω
+min
+j=1,...,N
+|q− qj|.
+The separation distance of Q is defined by
+ρQ := 1
+2 min
+k̸=j
+|qk − qj|.
+As e tQ of points in Ω is said to be quasi-uniform with respect to κ ≥ 1, if
+ρQ ≤ hQ,Ω ≤ κρQ.
+♦
+Combining the approximation error of moving least squares with a stability result for moving least
+squares, with respect to the input data, leads to the error estimate that we require to estimate the error in
+our proposed HJ-Net. Proof of the following may be found in Appendix C. The statement involves both
+the input data set Q and a set Q†, which Q is supposed to approximate, together with their respective
+fill-distances and separation distances.
+PROPOSITION 4.2 (Error stability). Let Ω = [0, 2π ]d ⊂ Rd and consider function f † ∈ Cr(Ω),f o rs o m e
+fixed regularity parameter r≥ 2. Assume that Q† ={ qj,†}N
+j=1 is quasi-uniform with respect to κ ≥ 1. Let
+{qj, zj}N
+j=1 be approximate interpolation data, and define Q :={ qj}N
+j=1, where, for some ρ ∈ (0, 1
+2ρQ† )
+and ϵ> 0, we have
+|qj − qj,†| <ρ , |zj − f(qj,†)| <ϵ .
+Using this approximate interpolation data let fz,Q := fz,Q,n be obtained by moving least squares ( 4.2)
+with n := r− 1. Then, there exist constants h0,γ , C > 0, depending only on d, r and κ ≥ 1, such that,
+for hQ,Ω ≤ h0 and moving least squares scale parameter δ := γ hQ,Ω ,w eh a v e
+∥f † − fz,Q∥L∞ ≤ C
+(
+∥f †∥Cr hr
+Q†,Ω + ϵ+∥f †∥C1 ρ
+⎞
+. (4.3)
+♦
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 28 ===
+674 S. LANTHALER AND A. M. STUART
+Algorithm 1 Pruning
+Input: Interpolation points Q={ qj}N
+j=1.
+Output: Pruned interpolation points Q′={ qjk}m
+k=1 with fill distance hQ′,Ω ≤ 3hQ,Ω , and Q′is quasi-
+uniform for κ = 3, i.e.,
+ρQ′≤ hQ′,Ω ≤ 3ρQ′
+procedure
+Set m← 1, j1 ← 1 and Q′←{ q1}.
+while m < N do
+Given Q′={ qj1 ,... , qjm}⊂ Q, does there exist qk ∈ Q, such that
+Bh(qk)∩
+m⋃
+ℓ=1
+Bh(qjℓ)=∅ ?
+if Ye sthen
+Set jm+1 ← k,
+Set Q′← Q′∪{ qk},
+Set m← m+ 1.
+else
+Terminate the algorithm.
+end if
+end while
+end procedure
+REMARK 4.3. The constants C and γ in the previous proposition can be computed explicitly ( Wendland,
+2004, see theorem 3.14 and corollary 4.8). ♦
+Proposition 4.2 reveals two sources of error in the reconstruction by moving least squares: the first
+term on the right-hand side of ( 4.3) is the error due to the discretization by a finite number of evaluation
+points qj. This error persists even in a perfect data setting, i.e., when qj = qj,† and zj = f †(qj,†).T h el a s t
+two terms in ( 4.3) reflect the fact that in our intended application to HJ-Net the evaluation points qj and
+the function values zj are only given approximately, via the approximate flow map Ψt ≈ Ψ †
+t , introducing
+additional error sources.
+The proof of Proposition 4.2 relies crucially on the fact that the set of evaluation points Q={ qj}N
+j=1
+is quasi-uniform. In our application to HJ-Net these points are obtained as the image of (qj
+0, pj
+0, zj
+0) :=
+(qj
+0,∇qu0(qj
+0), u0(qj
+0)) under the approximate flow Ψt. In particular, they depend on u0 and we cannot
+ensure any ap r i o r icontrol on the separation distance ρQ. Our proposed reconstruction R therefore
+involves the pruning step, stated as Algorithm 1. Lemma C.3 in Appendix C shows that Algorithm 1
+produces a quasi-uniform set Q′⊂ Q with the desired properties asserted above.
+Given the interpolation by moving least squares and the pruning algorithm we finally define the
+reconstruction map R : {(qj
+t, zj
+t)}N
+j=1 ↦→ fz,Q. In our application the interpolation data are connected
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 29 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 675
+Algorithm 2 Reconstruction R
+(1) Given approximate interpolation data {qj
+t, zj
+t}N
+j=1 at data points Q={ q1
+t ,... , qN
+t }, determine a quasi-
+uniform subset Q′={ qjk
+t }m
+k=1 ⊂ Q by Algorithm 1.
+(2) Given a degree of smoothness r ∈ N≥2, define fz,Q := fz,Q,n=r−1 as the moving least squares
+interpolant (4.2), based on the (pruned) interpolation data {(qjk
+t , zjk
+t )}m
+k=1 with δ = γ hQ′,Ω , and γ
+the constant in Proposition 4.2.
+with a ground truth map f † ∈ Cr(Ω). The following algorithm assumes knowledge of the degree of
+smoothness r:
+4.3 Summary of HJ-Net
+Thus, in the final definition of HJ-Net given in equation ( 4.1) we recall that E denotes the encoder
+mapping
+u0 ↦→ E(u0) :=
+(
+qj
+0,∇u0(qj
+0), u0(qj
+0)
+⎞
+.
+The mapping
+(
+qj
+0, pj
+0, zj
+0
+⎞
+↦→
+(
+qj
+t, pj
+t, zj
+t
+⎞
+:= Ψt
+(
+qj
+0, pj
+0, zj
+0; θ
+⎞
+approximates the flow Ψt for each of the triples, (qj
+0, pj
+0, zj
+0), j = 1,... , N, and θ is trained from
+data to minimize an approximate empirical loss. And, finally, the reconstruction R is obtained by
+applying the pruned moving least squares Algorithm 2 to the data {qj
+t, pj
+t, zj
+t}N
+j=1 at scattered data points
+Qt ={ q1
+t , ... , qN
+t } and with corresponding values zt = (z1
+t ,... , zN
+t ), to approximate the output u(q, t)≈
+fzt,Qt (q).
+5. Error estimates and complexity
+Subsection 5.1 contains statement of the main theorem concerning the computational complexity of
+HJ-Net, and the high level structure of the proof. The theorem demonstrates that the curse of parametric
+complexity is overcome in this problem in the sense that the cost to achieve a given error, as measured by
+the size of the parameterization, grows only algebraically with the inverse of the error. In Subsections
+5.2
+and 5.3 we provide a detailed discussion of the approximation of the Hamiltonian flow and the moving
+last squares algorithm, which, together, lead to the proof of Theorem 5.1. Proofs of the results stated in
+those two subsections are given in the appendix.
+5.1 HJ-Net beats the curse of parametric complexity
+THEOREM 5.1 (HJ-Net approximation estimate). Consider equation ( HJ) on periodic domain Ω =
+[0, 2π ]d, with Cr
+per initial data and Hamiltonian H ∈ Cr+1
+per , where r ≥ 2. Assume that H satisfies the
+no-blowup Assumption 3.1.L e t F ⊂ Cr
+per be a compact set of initial data, and let T < T∗(F), where
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 30 ===
+676 S. LANTHALER AND A. M. STUART
+T∗(F) is given by Proposition 3.2. Then, there is constant C = C(T, d, r, H, F)> 0, such that for any
+ϵ> 0 and t ∈ [0, T] there exists a set of points Qϵ ={ q1,... , qN}, optimal parameter θϵ and neural
+network Ψt(· )= Ψt(· ; θϵ) such that the corresponding HJ-Net approximation given by (4.1), with Steps
+(b) and (c) defined in Subsections 4.1 and 4.2, respectively, satisfies
+sup
+u0∈F
+∥St(u0)− S†
+t (u0)∥L∞ ≤ ϵ.
+Furthermore, we have the following complexity bounds: (i) the number N of encoding points Qϵ =
+{qj}N
+j=1 from Step (a) can be bounded by
+N≤ Cϵ−d/r; (5.1)
+and (ii) the neural network Ψt(· )= Ψt(· ; θϵ) from Step (b), Subsection 4.1, satisfies
+depth(Ψt)≤ C log(ϵ−1),s i z e (Ψt)≤ Cϵ−(2d+1)/r log(ϵ−1). (5.2)
+♦
+Proof. We first note that, for any u0 ∈ F and T < T∗(F), Proposition 3.2 shows that the solution u
+of ( HJ) can be computed by the method of characteristics up to time T. Thus, S†
+t is well defined for
+any t∈ [0, T]. We break the proof into three steps, relying on propositions established in the following
+subsections, and then conclude in a final fourth step.
+Step 1 (Neural network approximation). Let M be given by
+M := 1∨ sup
+u0∈F
+sup
+q∈Ω
+∥∇u0(q)∥ℓ∞ ∨ sup
+u0∈F
+sup
+q∈Ω
+|u0(q)|,
+where a∨ b denotes the maximum. By this choice of M we have∇u0(q)∈ [−M, M]d, u0(q)∈ [−M, M]
+for all u0 ∈ F, q∈ Ω. By Proposition 5.4 there exists a constant β = β(d, LH , t)≥ 1, and a constant
+C > 0, depending only on M, d, t, and the norm∥H∥Cr+1(Td×[−βM,βM]d), such that the Hamiltonian flow
+map Ψ †
+t (3.7) can be approximated by a neural network Ψt with
+size(Ψt)≤ Cϵ−(2d+1)/r log(ϵ−1), depth (Ψt)≤ C log(ϵ−1),
+and
+sup
+(q0,p0,z0)∈Ω×[−M,M]d×[−M,M]
+⏐⏐
+⏐Ψ
+t(q0, p0, z0)− Ψ †
+t (q0, p0, z0)
+⏐⏐
+⏐≤ ϵ. (5.3)
+Step 2 (Choice of encoding points). Fix ρ> 0, to be determined below. Let Q := ρZd ∩ [0, 2π ]d
+denote an equidistant grid on [0, 2 π ]d with grid spacing ρ. Enumerating the elements of Q we write
+Q={ q1
+0, ... , qN
+0}, where we note that there exists a constant C1 = C1(d)> 0 depending only on d, such
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 31 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 677
+that N≤ C1ρ−d; equivalently,
+ρd
+C1
+≤ 1
+N . (5.4)
+For any u0 ∈ F let
+Q†
+u0 :=
+{
+qj,†
+t
+⏐⏐⏐qj,†
+t = qt(qj
+0, pj
+0), qj
+0 ∈ Qϵ, pj
+0 =∇ qu0(qj
+0)
+}
+(5.5)
+be the set of image points under the characteristic mapping defined byu0. Since Q†
+u0 ={ qj,†
+t }N
+j=1 is a set of
+N points it follows from the definition of the fill distance thatN balls of radius hQ†
+u0 ,Ω coverΩ = [0, 2π ]d.
+A simple volume counting argument then implies that there exists a constant C0 = C0(d)> 0, such that
+1/N≤ C0 hd
+Q†
+u0 ,Ω ; equivalently,
+1
+C0N ≤ hd
+Q†
+u0 ,Ω , ∀ u0 ∈ F. (5.6)
+Given ϵfrom Step 1 we now choose ρ := (C0C1)1/dϵ1/r, so that by ( 5.4) and (5.6),
+ϵd/r = 1
+C0
+ρd
+C1
+≤ 1
+C0N ≤ hd
+Q†
+u0 ,Ω , ∀ u0 ∈ F.
+We emphasize that C0, C1 depend only on d, and are independent of u0 ∈ F and ϵ.W eh a v et h u ss h o w n
+that if Qϵ :={ q1,... , qN} is an enumeration of ρZd ∩ [0, 2π ]d with ρ := (C0C1)1/dϵ1/r then the fill
+distance of the image points Q†
+u0 under the characteristic mapping satisfies
+ϵ≤ hr
+Q†
+u0 ,Ω , ∀ u0 ∈ F. (5.7)
+In particular, this step defines our encoding points Qϵ.
+Step 3 (Interpolation error estimate). Let Qϵ be the set of evaluation points determined in Step 2.
+Since Qϵ is an equidistant grid with grid spacing proportional to ϵ1/r the fill distance of Qϵ is bounded
+by hQϵ,Ω ≤ Cϵ1/r, where the constant C= C(d)≥ 1 depends only on d. By Proposition 5.7 there exists
+a (possibly larger) constant C= C(d, t, H, F)≥ 1, such that for all u0 ∈ F the set of image points Q†
+u0
+under the characteristic mapping ( 5.5) has uniformly bounded fill distance
+hQ†
+u0 ,Ω ≤ Cϵ1/r, ∀ u0 ∈ F. (5.8)
+Furthermore, taking into account ( 5.7) the upper bound ( 5.3)i m p l i e st h a t
+sup
+(q0,p0,z0)∈Td×[−M,M]d×[−M,M]
+⏐⏐
+⏐Ψ
+t(q0, p0, z0)− Ψ †
+t (q0, p0, z0)
+⏐⏐
+⏐≤ h
+r
+Q†
+u0 ,Ω ,
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 32 ===
+678 S. LANTHALER AND A. M. STUART
+for any u0 ∈ F. In turn, this shows that the approximate interpolation data (qj
+t, zj
+t)= P◦ Ψt(qj
+0, pj
+0, zj
+0),
+j= 1,... , N, obtained from the neural network approximation Ψt ≈ Ψ †
+t by (orthogonal) projection P
+onto the first and last components, satisfy
+⏐⏐
+⏐q
+j
+t − qj,†
+t
+⏐⏐
+⏐≤ h
+r
+Q†
+u0 ,Ω ,
+⏐⏐
+⏐z
+j
+t − u(qj,†
+t , t)
+⏐⏐
+⏐≤ h
+r
+Q†
+u0 ,Ω ,
+where u(q, t) denotes the exact solution of the HJ PDE ( HJ) with initial data u0 ∈ F. By Proposition
+5.6 there exists a constant C > 0, depending only on d and r, such that the pruned moving least squares
+approximant fz,Qu0
+obtained by Algorithm 2 with (approximate) data points Qu0 ={ q1
+t ,... , qN
+t } and
+corresponding data values z={ z1
+t ,... , zN
+t } satisfies
+∥u(· , t)− fz,Qu0
+∥L∞(Ω) ≤ C
+(
+1+∥u(· , t)∥Cr(Ω)
+⎞
+hr
+Q†
+u0 ,Ω . (5.9)
+Step 4 (Conclusion). By the short-time existence result of Proposition 3.2 there exists C =
+C(H, F, t)> 0, such that ∥u(· , t)∥Cr(Ω) ≤ C for any solution u of the Hamilton–Jacobi equation
+(HJ) with initial data u(· , t = 0) = u0 ∈ F. By definition of the HJ-Net approximation we have
+St(u0)≡ fz,Qu0
+and by definition of the solution operator S†
+t (u0)≡ u(· , t). We thus conclude that
+∥St(u0)− S†
+t (u0)∥L∞
+(5.9)
+↓
+≤ Chr
+Q†
+u0 ,Ω
+(5.8)
+↓
+≤ Cϵ,
+for a constant C = C(T, d, r, H, F)> 0, independent of ϵ. Since ϵ is arbitrary replacing ϵ by ϵ/C
+throughout the above argument implies the claimed error and complexity estimate of Theorem 5.1. □
+REMARK 5.2 (Nonuniform sampling). In practice, an input-function-dependent, nonuniform sampling
+could improve the results of the moving least squares interpolant. This is especially relevant, given the
+potentially rapid growth of second- and higher order derivatives along characteristics. However, this
+would likely not lead to faster asymptotic convergence rates, motivating us to restrict attention to the
+uniformly sampled setting for our analysis, for simplicity. ♦
+REMARK 5.3 (Overall computational complexity of HJ-Net). The error and complexity estimate of
+Theorem 5.1 implies that for moderate dimensions d, and for sufficiently smooth input functions u0 ∈
+F ⊂ Cr
+per, with r > 3d+1, the overall complexity of this approach scales at most linearly inϵ−1: Indeed,
+the mapping of the data points(qj
+0, pj
+0, zj
+0)↦→ (qj
+t, pj
+t, zj
+t) for j= 1,... , N requires N forward-passes of the
+neural network Ψt, which has O(ϵ−(2d+1)/r log(ϵ−1)) internal degrees of freedom. Since N= O(ϵ−d/r)
+the computational complexity of this mapping is thus bounded by O(ϵ−(3d+1)/r log(ϵ−1)) = O(ϵ−1).
+A naive implementation of the pruning algorithm requires at most O(N2) = O(ϵ−2d/r) = O(ϵ−1)
+comparisons. The computational complexity of the reconstruction by the moving least squares method
+with m ≤ N (pruned) interpolation points and with M ∼ ϵ
+−d/r evaluation points can be bounded by
+O(m+ M)= O(ϵ−d/r + M)= O(ϵ−1) (Wendland, 2004, last paragraph of chapter 4.2). In particular,
+the overall complexity to obtain an ϵ-approximation of the output function St(u0)≈ S†
+t (u0) at e.g., the
+encoding points Qϵ (with M=| Qϵ|∼ ϵ−d/r) is at most linear in ϵ−1. ♦
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 33 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 679
+Theorem 5.1 shows that for fixed d and r the proposed HJ-Net architecture can overcome the general
+curse of parametric complexity in the operator approximation S ≈ S† implied by Theorem 2.11 even
+though the underlying operator does not have higher than Cr-regularity. This is possible because HJ-Net
+leverages additional structure inherent to the HJ PDE HJ (reflected in the method of characteristics), and
+therefore does not rely solely on the Cr-smoothness of the underlying operator S†.
+5.2 Approximation of Hamiltonian flow and quadrature map
+In this subsection we quantify the complexity of ϵ-approximation by an ReLU network as defined in
+Subsection 4.1.
+Recall that Ψ †
+t : Ω× Rd × R → Ω× Rd × R comprises solution of the Hamiltonian equations
+(3.1) and quadrature ( 3.2), leading to ( 3.4). An approximation Ψt : Ω× Rd× R→ Ω× Rd× R of this
+Hamiltonian flow map is provided the by the following proposition, proved in Appendix D.
+PROPOSITION 5.4. Let Ω = [0, 2π ]d.L e tr≥ 2, and t > 0 be given, and assume that H∈ Cr+1
+per (Ω× Rd)
+satisfies the no-blowup Assumption 3.1 with constant LH > 0. Then, for any M≥ 1, there exist constants
+β := (1+
+√
+d) exp(LH t) and C= C
+(
+∥H∥Cr+1(Ω×[−βM,βM]d), M, r, d, t
+⎞
+> 0, such that for all ϵ∈ (0, 1
+2 ]
+there is an ReLU neural network Ψt(· )= Ψt(· ; θϵ) satisfying
+sup
+(q0,p0,z0)∈Ω×[−M,M]d+1
+⏐⏐
+⏐Ψ
+t(q0, p0, z0)− Ψ †
+t (q0, p0, z0)
+⏐⏐
+⏐≤ ϵ, (5.10)
+satisfying
+size(Ψt)≤ Cϵ−(2d+1)/r log
+(
+ϵ−1
+⎞
+, depth (Ψt)≤ C log
+(
+ϵ−1
+⎞
+.
+♦
+REMARK 5.5. Using the results of Y arotsky & Zhevnerchuk (2020); Kohler & Langer (2021); Lu et al.
+(2021a) one could in fact improve the size bound of Proposition 5.4 somewhat: neglecting logarithmic
+terms in ϵ−1 it can be shown that a neural network with size (Ψt) ≲ ϵ−(d+1/2)/r suffices. However,
+this comes at the expense of substantially increasing the depth from a logarithmic scaling depth (Ψt) ≲
+log(ϵ−1), to an algebraic scaling depth (Ψt) ≲ ϵ−(d+1/2)/r. ♦
+5.3 Moving least squares reconstruction error
+In this subsection we discuss error estimates for the reconstruction by moving least squares, based on
+imperfect input–output pairs, as defined in Subsection 4.2.
+We recall that the reconstruction R in the HJ-Net approximation is obtained by applying the pruned
+moving least squares Algorithm 2 to the data {qj
+t, zj
+t}N
+j=1, where (qj
+t, pj
+t, zj
+t) are obtained as (qj
+t, pj
+t, zj
+t) =
+Ψt(qj
+0, pj
+0, zj
+0) with fixed evaluation points {qj
+0}N
+j=1 ⊂ Ω, and where pj
+0 :=∇ qu0(qj
+0), zj
+0 := u0(qj
+0)
+are determined in terms of a given input function u0, so that zj
+t ≈ u(qj
+t, t) is an approximation of the
+corresponding solution u(· , t) at time t.
+In the following text we first derive an error estimate in terms of the fill distance of Qt ={ qj
+t}N
+j=1,i n
+Proposition 5.6. Subsequently, in Proposition 5.7, we provide a bound on the fill distance hQt ,Ω at time
+t in terms of the fill distance hQ,Ω at time 0. Proof of both propositions can be found in Appendix D.
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 34 ===
+680 S. LANTHALER AND A. M. STUART
+PROPOSITION 5.6. Let Ω = [0, 2π ]d ⊂ Rd and fix a regularity parameter r ≥ 2. There exist constants
+h0, C > 0 such that the following holds: assume that Q† ={ q1,†,... , qN,†}⊂ Ω is a set of N evaluation
+points with fill distance hQ†,Ω ≤ h0. Then, for any 2π -periodic function f † ∈ Cr
+per(Ω), and approximate
+input–output data{(qj, zj)}N
+j=1, such that
+|qj − qj,†|≤ hr
+Q†,Ω , |zj − f †(qj,†)|≤ hr
+Q†,Ω ,
+the pruned moving least squares approximant fz,Q := fz,Q,n=r−1 of Algorithm 2 with interpolation data
+points Q={ q1, ... , qN} and data values z={ z1,... , zN} satisfies
+∥f † − fz,Q∥L∞(Ω) ≤ C
+(
+1+∥f †∥Cr(Ω)
+⎞
+hr
+Q†,Ω .
+♦
+In contrast to Proposition 4.2, Proposition 5.6 includes the pruning step in the reconstruction, and
+does not assume quasi-uniformity of either the underlying exact point distributionQ†, or the approximate
+point distribution Q. To obtain a bound on the reconstruction error we can combine the preservation of
+Cr-regularity implied by the short-time existence Proposition 3.2, with the following:
+PROPOSITION 5.7. Let Ω = [0, 2π ]d,l e t r ≥ 2 and assume that the Hamiltonian H ∈ Cr+1
+per (Ω× Rd) is
+periodic in q and satisfies Assumption 3.1 with constant LH > 0. Let F ⊂ Cr
+per(Ω) be a compact subset
+and fix t < T∗. Then, there exists a constant C= C(H, F, LH , t)> 0, such that for any set of evaluation
+points Q={ qj
+0}N
+j=1 ⊂ Ω, and for any u0 ∈ F the image points
+Q†
+u0 :=
+{
+qj
+t
+⏐⏐
+⏐q
+j
+t = Φ†
+t,u0(qj
+0), j= 1,... , N
+}
+⊂ Ω,
+under the spatial characteristic mapping Φ†
+t,u0 : q0 ↦→ qt(q0,∇qu0(q0)), satisfy the following uniform
+bound on the fill distance:
+hQ†
+u0 ,Ω ≤ ChQ,Ω .
+♦
+6. Conclusions
+The first contribution of this work is to study the curse of dimensionality in the context of operator
+learning, here interpreted in terms of the infinite-dimensional nature of the input space. We state a
+theorem that, for the first time, establishes a general form of the curse of parametric complexity, a
+natural scaling limit of the CoD in high-dimensional approximation, characterized by lower bounds
+that are exponential in the desired error. The theorem demonstrates that in general it is not possible to
+obtain complexity estimates, for the size of the approximating neural operator, that grow algebraically
+with inverse error unless specific structure in the underlying operator is leveraged; in particular, we
+prove that this additional structure has to go beyond C
+r- or Lipschitz-regularity. This considerably
+generalizes and strengthens earlier work on the curse of parametric complexity in Lanthaler (2023) ,
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 35 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 681
+where a mild form of this curse had been identified for PCA-Net. As shown in this work our result
+applies to many proposed operator learning architectures including PCA-Net, the FNO and DeepONet,
+and recent nonlinear extensions thereof. The lower complexity bound in this work is obtained for
+neural operator architectures based on standard feedforward ReLU neural networks, and could likely
+be extended to feedforward architectures employing piecewise polynomial activations. It is of note that
+algebraic complexity bounds, which seemingly overcome the curse of parametric complexity of this
+work, have recently been derived for the approximation of Lipschitz operators (
+Schwab et al. , 2023 );
+these results build on nonstandard neural network architectures with either superexpressive activation
+functions, or nonstandard connectivity, and therefore do not contradict our results. In fact, a recent follow-
+up ( Lanthaler, 2024 ) to this work sheds further light on this question from an information-theoretic
+perspective, resulting in a statement of the curse of parametric complexity, which is independent of the
+activation function.
+The second contribution of this paper is to present an operator learning framework for HJ equations,
+and to provide a complexity analysis demonstrating that the methodology is able to tame the curse of
+parametric complexity for these PDE. We present the ideas in a simple setting, and there are numerous
+avenues for future investigation. For example, as pointed out in Subsection
+3.3, one main limitation
+of the proposed approach based on characteristics is that we can only consider finite time intervals on
+which classical solutions of the HJ equations exist. As already pointed out, there it would be of interest
+to extend the methodology to viscosity solutions, after the potential formation of singularities. It would
+also be of interest to combine our work with the work on CoD with respect to dimension of Euclidean
+space, cited in Section
+1. Furthermore, in practice we recommend learning the Hamiltonian flow, which
+underlies the method of characteristics for the HJ equation, using symplectic neural networks ( Jin et al.,
+2020). However, the analysis of these neural networks is not yet developed to the extent needed for
+our complexity analysis in this paper, which builds on the work in ( Y arotsky, 2017). Extending the
+analysis of symplectic neural networks, and using this extension to analyse generalizations of HJ-Net as
+defined here are interesting directions for future study. Finally, we note that it is of interest to iterate
+the learned operator. In order to do this we would need to generalize the error estimates to the C1
+topology. This could be achieved either by interpolation between higher order Cs bounds of the proposed
+methodology for s > 1 combined with the existing error analysis, or by using the gradient variablep in the
+interpolation.
+Funding
+Swiss National Science Foundation (P500PT-206737 to S.L.); Department of Defense V annevar Bush
+Faculty Fellowship.
+REFERENCES
+ALBANO,P .& CANNARSA,P .(2002) Propagation of singularities for solutions of nonlinear first order partial differential
+equations. Arch. Ration. Mech. Anal., 162, 1–23.
+ALBANO,P ., CANNARSA,P . & SINESTRARI,C . (2020) Generation of singularities from the initial datum for Hamilton–
+Jacobi equations. J. Differ . Equations, 268, 1412–1426.
+ANTHONY,M . & BARTLETT,P .L . (1999) Neural Network Learning: Theoretical F oundations. Cambridge, England:
+Cambridge University Press.
+BACH,F . (2017) Breaking the curse of dimensionality with convex neural networks. J .M a c h .L e a r n .R e s ., 18, 1–53.
+BARRON,A .R . (1993) Universal approximation bounds for superpositions of a sigmoidal function. IEEE Tran. Inf.
+Theory, 39, 930–945.
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 36 ===
+682 S. LANTHALER AND A. M. STUART
+BARRON,E ., CANNARSA,P ., JENSEN,R . & SINESTRARI,C . (1999) Regularity of Hamilton–Jacobi equations when forward
+is backward. Indiana Univ. Math. J., 48, 1–409.
+BHA TTACHARY A,K ., HOSSEINI,B ., KOV ACHKI,N .B . & STUART,A .M . (2021) Model reduction and neural networks for
+parametric PDEs. SMAI J. Comput. Math. , 7, 121–157.
+BOULLÉ,N . , EARLS,C . J . & TOWNSEND,A . (2022) Data-driven discovery of green’s functions with human-
+understandable deep learning. Sci. Rep., 12, 1–9.
+BOULLÉ,N . & TOWNSEND,A . (2022) Learning elliptic partial differential equations with randomized linear algebra.
+F ound. Comput. Math., 23, 709–739.
+CHEN,T . & CHEN,H . (1995) Universal approximation to nonlinear operators by neural networks with arbitrary
+activation functions and its application to dynamical systems. IEEE Trans. Neural Networks, 6, 911–917.
+CHOW,S . - N .& HALE,J .K . (2012) Methods of Bifurcation Theory,v o l .251. New Y ork: Springer Science & Business
+Media.
+CHOW,Y .T ., DARBON,J . , OSHER,S . & YIN,W . (2017) Algorithm for overcoming the curse of dimensionality for
+time-dependent non-convex Hamilton–Jacobi equations arising from optimal control and differential games
+problems. J. Sci. Comput., 73, 617–643.
+CHOW,Y .T ., DARBON,J . , OSHER,S . & YIN,W . (2019) Algorithm for overcoming the curse of dimensionality for
+state-dependent Hamilton–Jacobi equations. J. Comput. Phys., 387, 376–409.
+CHRISTENSEN,O . et al. (2003) An Introduction to Frames and Riesz Bases ,v o l .7. Science+Business Media, New
+Y ork: Springer.
+DAHLKE,S ., DE MARI, GROHS,P . & LABA TE,D . (2015) Harmonic and Applied Analysis. Appl. Numer . Harmon. Anal.
+Cham Heidelberg New Y ork Dordrecht London: Springer International Publishing Switzerland.
+DARBON,J ., DOWER,P .M .& MENG,T . (2023) Neural network architectures using min-plus algebra for solving certain
+high-dimensional optimal control problems and Hamilton–Jacobi pdes. Math. Control Signals Syst., 35, 1–44.
+DARBON,J ., LANGLOIS,G .P . & MENG,T . (2020) Overcoming the curse of dimensionality for some Hamilton–Jacobi
+partial differential equations via neural network architectures. Res. Math. Sci., 7, 1–50.
+DARBON,J . & MENG,T . (2021) On some neural network architectures that can represent viscosity solutions of certain
+high dimensional Hamilton–Jacobi partial differential equations. J. Comput. Phys., 425, 109907.
+DARBON,J . & OSHER,S . (2016) Algorithms for overcoming the curse of dimensionality for certain Hamilton–Jacobi
+equations arising in control theory and elsewhere. Res. Math. Sci., 3, 1–26.
+DE HOOP,M ., HUANG,D .Z ., QIAN,E . & STUART,A .M . (2022) The cost-accuracy trade-off in operator learning with
+neural networks. J. Mach. Learn., 1, 299–341.
+DE HOOP,M .V . , KOV ACHKI,N .B . , NELSEN,N .H . & STUART,A .M . (2023) Convergence rates for learning linear
+operators from noisy data. SIAM/ASA J. Uncertainty Quantif. , 11, 480–513.
+DENG,B ., SHIN,Y ., LU,L ., ZHANG,Z . & KARNIADAKIS,G .E . (2022) Approximation rates of deeponets for learning
+operators arising from advection—Diffusion equations. Neural Networks, 153, 411–426.
+DEVORE,R .A ., HANIN,B . & PETROV A,G . (2021) Neural network approximation. Acta Numer ., 30, 327–444.
+DEVORE,R .A . (1998) Nonlinear approximation. Acta Numer ., 7, 51–150.
+DONOHO,D .L . (2001) Sparse components of images and optimal atomic decompositions. Constr . Approx., 17,
+353–382.
+EV ANS,L .C . (2010) Partial Differential Equations. Providence, R.I: American Mathematical Society.
+GOODFELLOW,I ., BENGIO,Y . & COURVILLE,A . (2016) Deep Learning. Cambridge, MA: MIT press.
+GRIBONV AL,R . , KUTYNIOK,G . , NIELSEN,M . & VOIGTLAENDER,F . (2022) Approximation spaces of deep neural
+networks. Constr . Approx., 55, 259–367.
+HEIL,C . (2010) A Basis Theory Primer: Expanded Edition . New Y ork: Springer Science & Business Media.
+HERRMANN,L ., SCHW AB,C . & ZECH,J . (2020) Deep ReLU neural network expression rates for data-to-qoi maps in
+Bayesian PDE inversion. SAM Res. Rep. , 36, 125011.
+HERRMANN,L ., SCHW AB,C . & ZECH,J . (2024) Neural and GPC operator surrogates: Construction and expression rate
+bounds. Advances in Computational Mathematics , 50, 72. https://doi.org/10.1007/s10444-024-10171-2.
+HESTHA VEN,J .S . & UBBIALI,S . (2018) Non-intrusive reduced order modeling of nonlinear problems using neural
+networks. J. Comput. Phys., 363, 55–78.
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 37 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 683
+HUA,N . & LU,W . (2023) Basis operator network: A neural network-based model for learning nonlinear operators
+via neural basis. Neural Networks, 164, 21–37.
+HURÉ,C ., PHAM,H ., BACHOUCH,A . & LANGRENÉ,N . (2021) Deep neural networks algorithms for stochastic control
+problems on finite horizon: Convergence analysis. SIAM J. Numer . Anal., 59, 525–557.
+JIN,P ., ZHANG,Z ., ZHU,A ., TANG,Y .& KARNIADAKIS,G .E . (2020) Sympnets: Intrinsic structure-preserving symplectic
+networks for identifying Hamiltonian systems. Neural Networks, 132, 166–179.
+KHOO,Y ., LU,J . & YING,L . (2021) Solving parametric PDE problems with artificial neural networks. European J.
+Appl. Math., 32, 421–435.
+KOHLER,M . & LANGER,S . (2021) On the rate of convergence of fully connected deep neural network regression
+estimates. Ann. Stat., 49, 2231–2249.
+KOROLEV,Y . (2022) Two-layer neural networks with values in a banach space. SIAM J. Math. Anal., 54, 6358–6389.
+KOV ACHKI,N .B ., LANTHALER,S . & MISHRA,S . (2021) On universal approximation and error bounds for Fourier neural
+operators. J. Mach. Learn. Res. , 22, 1–76.
+KOV ACHKI,N .B . , LI,Z . , LIU,B . , AZIZZADENESHELI,K . , BHA TTACHARY A,K . , STUART,A . & ANANDKUMAR,A . (2023)
+Neural operator: Learning maps between function spaces with applications to PDEs. J. Mach. Learn. Res., 24,
+1–97.
+LANTHALER,S . (2023) Operator learning with PCA-net: Upper and lower complexity bounds. J. Mach. Learn. Res. ,
+24, 1–67.
+LANTHALER,S . (2024) Operator Learning of Lipschitz Operators: An Information-Theoretic Perspective ,
+arXiv:2406.18794.
+LANTHALER,S ., LI,Z . & STUART,A .M .(2023a) The nonlocal neural operator: Universal approximation. arXiv preprint
+arXiv:2304.13221.
+LANTHALER,S . , MOLINARO,R . , HADORN,P . & MISHRA,S . (2023b) Nonlinear reconstruction for operator learn-
+ing of PDEs with discontinuities. Eleventh International Conference on Learning Representations . https://
+openreview.net/forum?id=CrfhZAsJDsZ.
+LANTHALER,S ., MISHRA,S . & KARNIADAKIS,G .E . (2022) Error estimates for DeepONets: A deep learning framework
+in infinite dimensions. Trans. Math. Appl., 6, 1–141.
+LI,Z . , KOV ACHKI,N . B . , AZIZZADENESHELI,K . , LIU,B . , BHA TTACHARY A,K . , STUART,A . M . & ANANDKUMAR,A .
+(2021) Fourier neural operator for parametric partial differential equations. Ninth International Conference
+on Learning Representations. https://openreview.net/forum?id=c8P9NQVtmnO.
+LIU,H . , YANG,H . , CHEN,M . , ZHAO,T . & LIAO,W . (2024) Deep nonparametric estimation of operators between
+infinite dimensional spaces. J. Mach. Learn. Res. , 25, 1–67.
+LU,J ., SHEN,Z ., YANG,H . & ZHANG,S . (2021a) Deep network approximation for smooth functions. SIAM J. Math.
+Anal., 53, 5465–5506.
+LU,L ., JIN,P ., PANG,G ., ZHANG,Z . & KARNIADAKIS,G .E . (2021b) Learning nonlinear operators via deeponet based
+on the universal approximation theorem of operators. Nat. Mach. Intell., 3, 218–229.
+MA,C . , WU,L . & WEINAN,E . (2022) The Barron space and the flow-induced function spaces for neural network
+models. Constr . Approx., 55, 369–406.
+MARCA TI,C . & SCHW AB,C . (2023) Exponential convergence of deep operator networks for elliptic partial differential
+equations. SIAM J. Numer . Anal., 61, 1513–1545.
+MENG,T ., ZHANG,Z . , DARBON,J . & KARNIADAKIS,G . (2022) Sympocnet: Solving optimal control problems with
+applications to high-dimensional multiagent path planning problems. SIAM J. Sci. Comput., 44, B1341–B1368.
+MHASKAR,H .N . , LIAO,Q . & POGGIO,T . (2016) Learning real and Boolean functions: When is deep better than
+shallow. Technical report, Center for Brains, minds and machines (CBMM).
+MHASKAR,H .N . & HAHM,N . (1997) Neural networks for functional approximation and system identification. Neural
+Comput., 9, 143–159.
+NAKAMURA-ZIMMERER,T ., GONG,Q . & KANG,W . (2020) Qrnet: Optimal regulator design with lqr-augmented neural
+networks. IEEE Control Syst. Lett. , 5, 1303–1308.
+NELSEN,N .H . & STUART,A .M . (2021) The random feature model for input-output maps between banach spaces.
+SIAM J. Sci. Comput. , 43, A3212–A3243.
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 38 ===
+684 S. LANTHALER AND A. M. STUART
+OPSCHOOR,J .A . , SCHW AB,C . & ZECH,J . (2022) Exponential relu dnn expression of holomorphic maps in high
+dimension. Constr . Approx., 55, 537–582.
+PA TEL,D . , RAY,D . , ABDELMALIK,M .R . , HUGHES,T .J . & OBERAI,A .A . (2024) V ariationally mimetic operator
+networks. Comput. Methods Appl. Mech. Eng. , 419, 116536, 1–30.
+PETERSEN,P . & VOIGTLAENDER,F . (2018) Optimal approximation of piecewise smooth functions using deep relu
+neural networks. Neural Networks, 108, 296–330.
+ROBBINS,H . & MONRO,S . (1951) A stochastic approximation method. Ann. Math. Stat., 22, 400–407.
+RYCK,T .D . & MISHRA,S . (2022) Generic bounds on the approximation error for physics-informed (and) operator
+learning. Advances in Neural Information Processing Systems (A. H. OH,A .A GARW AL,D .B ELGRA VE&K .C HO
+eds.). https://openreview.net/forum?id=bF4eYy3LTR9.
+SCHW AB,C ., STEIN,A . & ZECH,J . (2023) Deep operator network approximation rates for lipschitz operators. arXiv
+preprint arXiv:2307.09835.
+SCHW AB,C . & ZECH,J . (2019) Deep learning in high dimension: Neural network expression rates for generalized
+polynomial chaos expansions in UQ. Anal. Appl., 17, 19–55.
+SEIDMAN,J ., KISSAS,G ., PERDIKARIS,P . & PAPPAS,G .J . (2022) NOMAD: Nonlinear manifold decoders for operator
+learning. Advances in Neural Information Processing Systems , 35, 5601–5613.
+STEIN,E .M . & SHAKARCHI,R . (2009) Real Analysis: Measure Theory, Integration, and Hilbert Spaces . Princeton,
+New Jersey: Princeton University Press.
+WENDLAND,H . (2004) Scattered Data Approximation,v o l .17. Cambridge, England: Cambridge University Press.
+YAROTSKY,D . (2017) Error bounds for approximations with deep ReLU networks. Neural Networks, 94, 103–114
+Publisher: Elsevier.
+YAROTSKY,D . & ZHEVNERCHUK,A . (2020) The phase diagram of approximation rates for deep neural networks.
+Advances in neural information processing systems , 33, 13005–13015.
+YOU,H ., ZHANG,Q ., ROSS,C .J ., LEE,C . - H .& YU,Y . (2022) Learning deep implicit fourier neural operators (ifnos)
+with applications to heterogeneous material modeling. Comput. Methods Appl. Mech. Eng. , 398, 115296.
+ZHANG,Z . , TAT,L . & SCHAEFFER,H . (2023) BelNet: Basis enhanced learning, a mesh-free neural operator.
+Proceedings of the Royal Society A , 479, 20230043, 1–30.
+ZHU,Y . & ZABARAS,N . (2018) Bayesian deep convolutional encoder–decoder networks for surrogate modeling and
+uncertainty quantification. J. Comput. Phys., 366, 415–447.
+Appendix A. Proof of curse of parametric complexity
+A.1 Preliminaries in finite dimensions
+Our goal in this section is to prove Proposition 2.1, which we repeat here:
+To this end we recall and extend several results from Y arotsky (2017)on the ReLU neural network
+approximation of functions f : RD → R. Subsequently, these results will be used as building blocks to
+construct functionals in the infinite-dimensional context, leading to a curse of parametric complexity in
+that setting, made precise in Theorem 2.11. Here, we consider the space Cr(RD) consisting of r-times
+continuously differentiable functions f : RD → R. We denote by
+FD,r :=
+{
+f ∈ Cr(RD)
+⏐⏐⏐⏐
+⏐sup
+|α|≤r
+sup
+x∈RD
+⏐⏐Dα f(x)
+⏐⏐≤ 1
+}
+the unit ball in Cr(RD). For technical reasons it will often be more convenient to consider the subset
+◦
+FD,r ⊂ FD,r consisting of functions f ∈ FD,r vanishing at the origin, f(0)= 0.
+REMARK A1. We note that previous work ( Ya r o t s ky, 2017) considers the Sobolev space Wr,∞([0, 1]D)
+and the unit ball in Wr,∞([0, 1]D), rather than Cr(RD) and our definition of FD,r. It turns out that the
+complexity bounds of Ya r o t s ky(2017) remain true also in our setting (with essentially identical proofs).
+We include the necessary arguments below. ♦
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 39 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 685
+Let f : RD → R be a function. Following ( Y arotsky, 2017, section 4.3) we will denote by N(f ,ϵ)
+the minimal number of hidden computation units that is required to approximate f to accuracy ϵ by an
+arbitrary ReLU feedforward network Ψ , uniformly over the unit cube [0, 1]D, i.e., N(f ,ϵ)is the minimal
+integer M such that there exists an ReLU neural network Ψ with at most M computation units4 and such
+that
+sup
+x∈[0,1]D
+|f(x)− Ψ( x)|≤ ϵ.
+REMARK A2. We emphasize that, even though the domain of a function f ∈ FD,r is by definition the
+whole space RD, the above quantity N(f ,ϵ) only relates to the approximation of f over the unit cube
+[0, 1]D. The reason for this seemingly awkward choice is that it will greatly simplify our arguments later
+on, when we construct functionals on infinite-dimensional Banach spaces with a view towards proving
+an infinite-dimensional analogue of the CoD. ♦
+Note that the number of (nontrivial) hidden computation units M of a neural network Ψ : RD → R
+obeys the bounds M ≤ size(Ψ )≤ 5DM4: the lower bound follows from the fact that each (nontrivial)
+computation unit has at least one nonzero connection or a bias feeding into it. To derive the upper bound
+we note that any network with at most M computation units can be embedded in a fully connected
+enveloping network (allowing skip-connections) ( Y arotsky, 2017, cf. fig. 6(a)) with depth M, width M,
+where each hidden node is connected to all other M2 − 1 hidden nodes plus the output, and where each
+node in the input layer is connected to all M2 hidden units plus the output. In addition, we take into
+account that each computation unit and the output layer have an additional bias. The existence of this
+enveloping network thus implies the size bound
+size(Ψ )≤ M2(M2 − 1)+ M2
+  
+hidden connections
++ D(M2 + 1)  
+input conn.
++ M+ 1
+biases
+≤ M4 + 2DM4 + M+ 1≤ 5DM4,
+valid for any neural network Ψ : RD → R with at most M computation units.
+In view of the lower size bound, size (Ψ )≥ M, Proposition 2.1 above is now clearly implied by the
+following:
+PROPOSITION A3. Fix r∈ N. There is a universal constant γ> 0 and a constant ϵ= ϵ(r)> 0, depending
+only on r, such that for any D∈ N there exists a function fD ∈
+◦
+FD,r for which
+N(fD,ϵ)≥ ϵ−γ D/r, ∀ϵ≤ ϵ.
+♦
+As an immediate corollary of PropositionA3 we conclude that fD cannot be approximated to accuracy
+ϵby a family of ReLU neural networks Ψϵ with
+size(Ψϵ)= o(ϵ−γ D/r).
+The latter conclusion was established by Y arotsky ( Y arotsky, 2017, theorem 5) (with γ = 1/9).
+Proposition 2.1 improves on Y arotsky’s result in two important ways: firstly, it implies that the lower
+4 The number of computation units equals the number of scalar evaluations of the activation σ in a forward-pass, cf. Anthony
+& Bartlett (1999) .
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 40 ===
+686 S. LANTHALER AND A. M. STUART
+bound size(Ψϵ) ≥ ϵ−γ D/r holds for all ϵ≤ ϵ, and not only along a (unspecified) sequence ϵk → 0;
+secondly, it shows that the constantϵcan be chosen independently of D. This generalization of Y arotsky’s
+result will be crucial for the extension to the infinite-dimensional case, which is the goal of this work.
+To prove Proposition A3 we will need two intermediate results, which build on Y arotsky (2017).W e
+start with the following lemma providing a lower bound on the required size of a fixed neural network
+architecture, which is able to approximate arbitrary f ∈
+◦
+FD,r to accuracy ϵ≥ 0. This result is based
+on ( Y arotsky, 2017, theorem 4(a)), but explicitly quantifies the dependence on the dimension D.T h i s
+dependence was left unspecified in earlier work.
+LEMMA A4. Fix r ∈ N.L e t Ψ = Ψ(· ; θ) be an ReLU neural network architecture depending on
+parameters θ ∈ RW . There exists a constant c0 = c0(r)> 0, such that if
+sup
+f∈
+◦
+FD,r
+inf
+θ∈RW
+∥f − Ψ(· ; θ)∥L∞([0,1]D) ≤ ϵ,
+for some ϵ> 0 then W ≥ (c0ϵ)−D/2r. ♦
+Proof. The proof in Ya r o t s ky(2017) is based on the V apnik–Chervonenkis (VC) dimension. We will not
+repeat the entire argument here, but instead discuss only the required changes in the proof of Y arotsky,
+which are needed to prove our extension of his result. In fact, there are only two differences between the
+proof our Lemma A.4, and (Ya r o t s ky, 2017, theorem 4(a)), which we now point out: the first difference
+is that we consider
+◦
+FD,r, consisting of Cr(RD) functions vanishing at the origin, whereas Ya r o t s ky(2017)
+considers the unit ball in Wr,∞([0, 1]D). Nevertheless, the proof of Ya r o t s ky(2017) applies to our setting
+in a straightforward way. To see this we recall that the construction in ( Ya r o t s ky, 2017, proof of theorem
+4, eq. (35)) considers f ∈ FD,r of the form
+f(x)=
+ND
+∑
+m=1
+ymφ(N(x− xm)),( A . 1 )
+with coefficients ym to be determined later, and where φ : RD → R is a C∞ bump function, which is
+required to satisfy 5
+φ(0)= 1 and φ(x)= 0, if ∥x∥ℓ∞ > 1/2. (A.2)
+In ( A.1), the points x1,... , xND ∈ [0, 1]D are chosen such that the ℓ∞-distance between any two of
+them is at least 1 /N. We can easily ensure that f(0) = 0, by choosing the points xm to be of the form
+(j1, ... , jD)/N, where j1,... , jD ∈{ 1,... , N}. Then, since for any multi-index α of order |α|≤ r the
+mixed derivative
+max
+x
+|Dα f(x)|≤ Nr max
+m
+|ym| max
+x
+|Dαφ(x)|,
+any function f of the form ( A.1) belongs to
+◦
+FD,r, provided that
+max
+m
+|ym|≤ ˜c1N−r,
+5 We note that choosing the ℓ∞ to define the set where φ(x)= 0, rather than the ℓ2 Euclidean distance as in Ya r o t s ky(2017), is
+immaterial. The only requirement is that the support of the functions on the right-hand side in the definition ( A.1) do not overlap.
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 41 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 687
+where
+˜c1 =
+(
+sup
+|α|≤r
+sup
+x∈[0,1]D
+|Dαφ(x)|
+⎞−1
+.( A . 3 )
+As shown in Y arotsky (2017) the above construction allows one to encode arbitrary Boolean values
+z1, ... , zND ∈{ 0, 1} by construction suitable f ∈
+◦
+FD,r; this in turn can be used to estimate a VC-dimension
+related to Ψ(· ;θ) from below, following verbatim the arguments in Y arotsky (2017). As no changes are
+required in this part of the proof we will not repeat the details here; Instead, following the argument
+leading up to (
+Y arotsky, 2017, eq. (38)), and under the assumptions of Lemma A.4, Y arotsky’s argument
+immediately implies the following lower bound:
+W ≥˜c0
+( 3ϵ
+˜c1
+⎞−D/2r
+,
+where˜c0 is an absolute constant.
+To finish our proof of LemmaA.4, it remains to determine the dependence of the constant˜c1 in (A.3),
+on the parameters D and r. To this end, we construct a specific bump function φ : RD → R. Recall that
+our only requirement on φ in the above argument is that ( A2) must hold. To construct suitable φ,l e t
+φ0 : R→ R, ξ ↦→ φ0(ξ) be a smooth bump function such that φ0(0)= 1,∥φ0∥L∞ ≤ 1 and φ0(ξ) = 0
+for|ξ| > 1/2. We now make the particular choice
+φ(x1,... , xD) :=
+D∏
+j=1
+φ0(xj).
+Let α= (α1, ... ,αD) be a multi-index with |α|= ∑ D
+j=1 αj ≤ r.L e tκ :=|{ αj ̸= 0} denote the number
+of nonzero components of α. We note that κ ≤ r. We thus have
+|Dαφ(x)|=
+D∏
+j=1
+|Dαj φ0(xj)|≤
+∏
+αj̸=0
+|Dαj φ0(xj)|≤∥φ0∥κ
+Cr(R) ≤∥φ0∥r
+Cr(R).
+In particular, we conclude that ˜c1 = [sup|α|≤r supx∈[0,1]D |Dαφ(x)|]−1 can be bounded from below by
+˜c1 ≥˜c2 :=∥φ0∥−r
+Cr(R), where˜c2 =˜c2(r) clearly only depends on r, and is independent of the ambient
+dimension D. The claimed inequality of Lemma A.4 now follows from
+W ≥˜c0
+( 3ϵ
+˜c1
+⎞−D/2r
+≥
+( 3ϵ
+(˜c0 ∧ 1)2r/D˜c2
+⎞−D/2r
+≥
+( 3ϵ
+(˜c0 ∧ 1)2r˜c2
+⎞−D/2r
+,
+i.e., we have W ≥ (c0ϵ)−D/2r with constant
+c0 = 3
+(˜c0 ∧ 1)2r˜c2(r) ,
+depending only on r. □
+While Lemma A4 applies to a fixed architecture capable of approximating all f ∈
+◦
+FD,r, our goal is
+to instead construct a single f ∈
+◦
+FD,r for which a similar lower complexity bound holds for arbitrary
+architectures. The construction of such f will rely on the following lemma, based on ( Y arotsky, 2017,
+Lem. 3):
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 42 ===
+688 S. LANTHALER AND A. M. STUART
+LEMMA A5. Fix r∈ N. For any (fixed) ϵ> 0, there exists fϵ∈
+◦
+FD,r, such that
+N(fϵ,ϵ)≥ D−1/4(c1ϵ)−D/8r,
+where c1 = c1(r)> 0 depends only on r. ♦
+Proof. As explained above, any neural network (with potentially sparse architecture), Ψ : RD → R,
+with M computation units can be embedded in the fully connected architecture ˜Ψ(· ; θ) , θ ∈ RW , with
+size bound W ≤ 5DM4. By Lemma A4, it follows that if W ≤ 5DM4 <( c0ϵ)−D/2r, then there exists
+fϵ∈
+◦
+FD,r, such that
+inf
+θ∈RW
+∥fϵ− ˜Ψ(· ; θ)∥L∞ >ϵ .
+Expressing the above size bound in terms of M, it follows that for any network Ψ with M <
+(5D)−1/4(c0ϵ)−D/8r computation units, we must have ∥fϵ− Ψ∥L∞ >ϵ . Thus, approximation of fϵ
+to within accuracy ϵ requires at least M ≥ (5D)−1/4(c0ϵ)−D/8r computation units. From the definition
+of N(fϵ, ϵ), we conclude that
+N(fϵ,ϵ)≥ D−1/4(c1ϵ)−D/8r,
+for this choice of fϵ∈
+◦
+FD,r, with constant c1 = 52rc0(r) depending only on r. □
+Lemma A5 will be our main technical tool for the proof of PropositionA3. We also recall thatN(f ,ϵ)
+satisfies the following properties, ( Y arotsky, 2017, eq. (42)–(44)):
+N(af ,|a|ϵ)= N(f ,ϵ), (A.4a)
+N(f ± g,ϵ+∥g∥L∞ )≤ N(f ,ϵ), (A.4b)
+N(f1 ± f2,ϵ1 + ϵ2)≤ N(f1,ϵ1)+ N(f2,ϵ2). (A.4c)
+Proof (Proposition A3). We define a rapidly decaying sequence ϵk → 0, by ϵ1 = 1/4 and ϵk+1 = ϵ2
+k ,
+so that by recursion ϵk = 2−2k
+. We also define ak := 1
+2ϵ1/2
+k = 1
+2ϵk−1. For later reference, we note that
+since ϵk ≤ 1/2 for all k,w eh a v e
+∞∑
+s=k+1
+as = 1
+2
+(
+ϵk + ϵ2
+k + ϵ22
+k + ...
+⎞
+≤ 1
+2ϵk
+∞∑
+s=0
+2−s = ϵk.( A . 5 )
+Our goal is to construct f ∈
+◦
+FD,r of the form
+f =
+∞∑
+k=1
+akfk, with fk ∈
+◦
+FD,r ∀ k∈ N.
+We note that ak ≤ 2−k, hence if f is of the above form then,
+∥f∥Cr ≤
+∞∑
+s=1
+as∥fs∥Cr ≤ 1, f(0)=
+∞∑
+s=1
+as fs(0)
+=0
+= 0,
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 43 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 689
+implies that f ∈
+◦
+FD,r irrespective of the specific choice of fk ∈
+◦
+FD,r. In the following construction, we
+choose γ := 1/32 throughout. We determine fk recursively, formally starting from the empty sum, i.e.,
+f = 0. In the recursive step, given f1,... , fk−1, we distinguish two cases:
+Case 1: Assume that
+N
+( k−1∑
+s=1
+asfs,2ϵk
+⎞
+≥ ϵ−γ D/r
+k .
+In this case, we set fk := 0, and trivially obtain
+N
+( k∑
+s=1
+asfs,2ϵk
+⎞
+≥ ϵ−γ D/r
+k .( A . 6 )
+Case 2: In the other case, we have
+N
+( k−1∑
+s=1
+asfs,2ϵk
+⎞
+<ϵ−γ D/r
+k .
+Our first goal is to again choose fk such that (A.6) holds, at least for sufficiently large k. We note that, by
+the general properties of N ,( A.4c), and the assumption of Case 2:
+N
+( k∑
+s=1
+asfs,2ϵk
+⎞
+≥ N(akfk,4ϵk)− N
+( k−1∑
+s=1
+asfs,2ϵk
+⎞
+≥ N(akfk,4ϵk)− ϵ−γ D/r
+k .( A . 7 )
+By Lemma A5, we can find fk ∈
+◦
+FD,r, such that
+N(akfk,4ϵk)
+(A.4a)
+↓
+= N(fk,4ϵk/ak)= N(fk,4ϵ1/2
+k )≥ D−1/4(8c1ϵ1/2
+k )−D/8r.( A . 8 )
+This defines our recursive choice of fk in Case 2. By ( A.7) and ( A.8), to obtain ( A.6) it now suffices to
+show that
+D−1/4(8c1ϵ1/2
+k )−D/8r ≥ 2ϵ−γ D/r
+k .
+It turns out that there exists ϵ> 0 depending only on r, such that
+(82c2
+1ϵk)−D/16r ≥ 2D1/4ϵ−γ D/r
+k = (2−r/γ DD−r/(4γ D)ϵk)−γ D/r,
+for all ϵk ≤ ϵ, and where γ = 1/32. In fact, upon raising both sides to the exponent −32r/D,i ti s
+straightforward to see that this inequality holds independently of D∈ N, provided that
+ϵk ≤ infD D−r/(4γ D)
+[28r8c1(r)]4 ,
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 44 ===
+690 S. LANTHALER AND A. M. STUART
+where we note that inf D D−r/(4γ D) > 0 on account of the fact that lim D→∞ D−1/D = 1. Define ϵby
+ϵ(r) := min
+{
+k∈ N
+⏐⏐⏐⏐
+⏐ϵ
+k ≤ infD D−r/(4γ D)
+[28r8c1(r)]4
+}
+.
+With this choice of ϵ,γ> 0, and by construction of fk, we then have
+N
+( k∑
+s=1
+asfs,2ϵk
+⎞
+≥ ϵ−γ D/r
+k ,( A . 9 )
+for all ϵk ≤ ϵ. This is inequality ( A.6), and concludes our discussion of Case 2.
+Continuing the above construction by recursion, we obtain a sequence f1, f2,···∈
+◦
+FD,r, such that
+(A.9) holds for any k∈ N such that ϵk ≤ ϵ.D e f i n ef = ∑∞
+k=1 akfk. We claim that for any ϵ≤ ϵwe have
+N(f ,ϵ)≥ ϵ−γ D/2r.
+To see this, we fix ϵ≤ ϵ. Choose k∈ N, such that ϵk ≤ ϵand ϵ2
+k ≤ ϵ≤ ϵk. Then,
+N(f ,ϵ)≥ N(f ,ϵk)= N
+( ∞∑
+s=1
+asfs,ϵk
+⎞
+(A.4b)
+↓
+≥ N
+⎛
+⎝
+k∑
+s=1
+asfs,ϵk +
+
+
+∞∑
+s=k+1
+asfs
+
+
+L∞
+⎞
+⎠
+≥ N
+( k∑
+s=1
+asfs,ϵk +
+∞∑
+s=k+1
+as
+⎞
+(A.5)
+↓
+≥ N
+( k∑
+s=1
+asfs,2ϵk
+⎞
+(A.9)
+↓
+≥ ϵ−γ D/r
+k ≥ ϵ−γ D/2r,
+where the last inequality follows from ϵk ≤ ϵ1/2. The claim of Proposition A3 thus follows for all ϵ≤ ϵ,
+upon redefining the universal constant as γ = (1/32)/2= 1/64. □
+A.2 Proof of Lemma 2.7
+Proof (Lemma 2.7). Since the interior of Ω is nonempty, then upon a rescaling and shift of the domain,
+we may wlog assume that [0, 2 π ]d ⊂ Ω. Let us define eκ ∝ sin(κ· x) as a suitable re-normalization of
+the standard Fourier sine-basis, indexed by κ ∈ Nd, and normalized such that ∥eκ∥Cs = 1. We note that
+for each eκ we can define a bi-orthogonal functional e∗
+κ by
+e∗
+κ(u) := 2
+(2π) d
+∫
+[0,2π ]d
+u(x) sin(κ· x) dx.
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 45 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 691
+The norm of e∗
+κ is easily seen to be bounded by 2. Hence, for any enumeration j↦→ κ(j), the sequence
+eκ(j) satisfies the assumptions in the definition of a infinite-dimensional hypercube.
+Furthermore, if j ↦→ κ(j) is an enumeration of κ ∈ Nd, such that j ↦→∥κ(j)∥ℓ∞ is monotonically
+increasing (nondecreasing), we note that any series of the form
+u= A
+∞∑
+j=1
+j−α yj eκ(j), yj ∈ [0, 1],
+is absolutely convergent in Cρ(Ω), provided that
+∞∑
+j=1
+j−α∥eκ(j)∥Cρ(Ω) ∼
+∞∑
+j=1
+j−α∥κ(j)∥ρ−s
+ℓ∞ <∞.
+Inverting the enumeration j= j(κ) for κ ∈ Nd, and setting K :=∥κ∥ℓ∞ ,w ef i n dt h a t
+#
+{
+κ′∈ Nd
+⏐⏐
+⏐∥κ
+′∥ℓ∞ < K
+}
+≤ j(κ) ≤ #
+{
+κ′∈ Nd
+⏐⏐
+⏐∥κ
+′∥ℓ∞ ≤ K
+}
+,
+where the number of elements in the lower and upper bounding sets are ∼ Kd. We thus conclude that
+j(κ) ∼ Kd. We also note that each shell
+{
+κ ∈ Nd ⏐⏐∥κ∥ℓ∞ = K
+}
+, with K∈ N, contains∼ Kd−1 elements.
+Thus, we have
+∞∑
+j=1
+j−α∥κ(j)∥ρ−s
+ℓ∞ ∼
+∞∑
+K=1
+∑
+∥κ∥ℓ∞=K
+j(κ)−α∥κ∥ρ−s
+ℓ∞
+∼
+∞∑
+K=1
+K−αd ∑
+∥κ∥ℓ∞=K
+∥κ∥ρ−s
+ℓ∞
+∼
+∞∑
+K=1
+K−αdKd−1Kρ−s
+=
+∞∑
+K=1
+K
+−1−d
+(
+α−1−ρ−s
+d
+⎞
+.
+The last sum converges if α> 1− ρ−s
+d . Thus, choosing A > 0 sufficiently small then ensures that
+Qα = Qα(A; e1, e2,...) is a subset of K=
+{
+u∈ Cρ(Ω)
+⏐⏐∥u∥Cρ ≤ M
+}
+. □
+A.3 Proof of Theorem 2.11
+We now provide the detailed proof of Theorem 2.11, which builds on Proposition A.3 above.
+Proof. Fix δ> 0. By assumption on K ⊂ X , there exists A > 0 and a linearly independent sequence
+e1, e2,···∈ X of normed elements, such that the set Qα consisting of all u∈ X of the form
+u= A
+∞∑
+j=1
+j−α yj ej, yj ∈ [0, 1],
+defines a subset Qα ⊂ K.
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 46 ===
+692 S. LANTHALER AND A. M. STUART
+Step 1 (Finding embedded cubes ≃[0, 1]D). We note that for any k ∈ N and for any choice of
+yj ∈ [0, 1], with indices j= 2k,... ,2 k+1 − 1, we have
+u= A2−(k+1)α
+2k+1−1∑
+j=2k
+yjej ∈ Qα . (A.10)
+Set D= 2k, and let us denote the set of all such u by QD, in the following. Note that up to the constant
+rescaling by A2−(k+1)α , QD can be identified with the D-dimensional unit cube [0, 1] D. In particular,
+since QD ⊂ Qα ⊂ K, it follows that K contains a rescaled copy of [0, 1] D for any such D. Furthermore,
+it will be important in our construction that all of the embedded cubes, defined by ( A.10)f o rk∈ N, only
+intersect at the origin.
+By Proposition A3, there exist constants γ , ϵ> 0, independent of D, such that given any D = 2k,
+we can find fD : RD → R, fD ∈
+◦
+FD,r, for which the following lower complexity bound holds:
+N(fD,ϵ)≥ ϵ−γ D/r, ∀ϵ≤ ϵ. (A.11)
+Our aim is to construct S† : X → R, such that the restriction S†|QD
+to the cube QD ≃[0, 1]D
+‘reproduces’ this fD. If this can be achieved, then our intuition is that S† embeds all fD for D = 2k,
+k∈ N, at once, and hence a rescaled version of the lower complexity bound ≳D ϵ−γ D/r should hold for
+any D. Our next aim is to make this precise, and determine the implicit constant that arises due to the
+fact that QD is only a rescaled version of [0, 1] D.
+Step 2 (Construction of S†). To construct suitable S†, we first recall that we assume the existence of
+‘bi-orthogonal’ elements e∗
+1, e∗
+2,... in the continuous dual space X∗, such that
+e∗
+i (ej)= δij, ∀ i, j∈ N,
+and furthermore, there exists a constant M > 0, such that∥e∗
+j∥X∗ ≤ M for all j∈ N. Given the functions
+fD = f2k from Step 1, we now make the following ansatz for S†:
+S†(u)=
+∞∑
+k=1
+2−α∗rkf2k
+(
+A−12(k+1)α
+[
+e∗
+2k (u),... , e∗
+2k+1−1(u)
+]⎞
+. (A.12)
+Here, f2k = fD (for D= 2k) satisfies ( A.11) and α∗ = 1+ α+ δ/2. We note in passing that S† defines
+a r-times Fréchet differentiable functional. This will be rigorously shown in Lemma A7 below (with
+c= A−12α ).
+Step 3 (Relating S† with fD). We next show in which way ‘the restriction S†|QD
+to the cube QD ≃
+[0, 1]D reproduces fD’. Note that if u∈ QD is of the form ( A.10) with D= 2k and with coefficients
+y := [y2k ,... , y2k+1−1]∈ [0, 1]2k
+= [0, 1]D,
+then, if k′̸= k,
+[e∗
+2k′(u),... , e∗
+2k′+1−1(u)]= [0,... ,0 ] ,
+while for k′= k we find
+[e∗
+2k (u),... , e∗
+2k+1−1(u)]= [y2k ,... , y2k+1−1]= y.
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 47 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 693
+From the fact that f2k′(0)= 0 for all k′by construction (recall that f2k′∈
+◦
+F2k′,r), we conclude that
+S†(u)= 2−α∗rkf2k (y)= D−α∗rfD(y), (A.13)
+for any u∈ QD. In this sense, ‘ S†|QD
+reproduces fD’.
+Step 4 (Lower complexity bound, uniform in D). Let Sϵ : X → R be a family of operators of neural
+network-type, such that
+sup
+u∈K
+|S†(u)− Sϵ(u)|≤ ϵ, ∀ϵ> 0.
+By assumption on Sϵ being of neural network-type, there exists ℓ= ℓϵ∈ N, a linear mapping Lϵ : X →
+Rℓ, and Φϵ : Rℓ→ R a neural network representing Sϵ:
+Sϵ(u)= Φϵ(Lϵu), ∀ u∈ X .
+For D= 2k, k∈ N, define ιD : RD → X by
+ιD(y)= A2−αk
+2k
+∑
+j=1
+yje2k+j−1.
+Then, since Lϵ◦ ιD : RD → Rℓ is a linear mapping, there exists a matrix WD ∈ Rℓ×D, such that
+Lϵ◦ ιD(y)= WDy for all y∈ RD. In particular, it follows that
+Sϵ(ιD(y))= Φϵ(Wdy),
+By (A.10), we clearly have ιD([0, 1]D)= QD.L e t ˆΦϵ(y) := Dα∗rΦϵ(WDy). It now follows that
+sup
+y∈[0,1]D
+⏐⏐fD(y)− ˆΦϵ(y)
+⏐⏐= Dα∗r sup
+y∈[0,1]D
+⏐⏐
+⏐D
+−α∗rfD(y)− Φϵ(WDy)
+⏐⏐
+⏐
+= D
+α∗r sup
+u∈QD
+⏐⏐
+⏐S
+†(u)− Sϵ(u)
+⏐⏐
+⏐
+≤ D
+α∗r sup
+u∈K
+⏐⏐
+⏐S
+†(u)− Sϵ(u)
+⏐⏐
+⏐
+≤ D
+α∗rϵ.
+Let M denote the number of hidden computation units of ˆΦϵ. By construction of fD (cp. Proposition A3),
+we have
+size(ˆΦϵ)≥ M≥ N(fD, Dα∗rϵ)≥ (Dα∗rϵ)−γ D/r,
+whenever Dα∗rϵ≤ ϵ. On the other hand, we can also estimate (cp. equation ( 2.2) in Section 2.1.2),
+size(ˆΦϵ)≤ 2∥WD∥0 + 2s i z e(Φϵ)≤ 2Dsize(Φϵ)+ 2s i z e(Φϵ)≤ 4Dsize(Φϵ).
+Combining these bounds, we conclude that
+size(Φϵ)≥ 1
+2D(Dα∗rϵ)−γ D/r = 1
+2(Dα∗r+r/γ Dϵ)−γ D/r,
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 48 ===
+694 S. LANTHALER AND A. M. STUART
+holds for any neural network representation of Sϵ, whenever Dα∗rϵ≤ ϵ. And hence
+cmplx(Sϵ)≥ 1
+2(Dα∗r+r/γ Dϵ)−γ D/r, (A.14)
+whenever Dα∗rϵ≤ ϵ. By Lemma A6 below, taking the supremum on the right over all admissible D
+implies the lower bound
+cmplx(Sϵ)≥ exp(cϵ−1/(α∗+δ/2)r), ∀ϵ≤˜ϵ,
+where˜ϵ, c > 0 depend only on α∗, r,ϵ(r),δ and γ . Recalling our choice of α∗ = 1+ α+ δ/2, and the
+fact that the constant ϵ= ϵ(r) depends only on r, while γ is universal, it follows that
+cmplx(Sϵ)≥ exp(cϵ−1/(α+1+δ)r), ∀ϵ≤˜ϵ,
+with ˜ϵ, c > 0 depending only on α, r,δ. Up to a change in notation, this is the claimed complexity
+bound. □
+The following lemma addresses the optimization of the lower bound in ( A.14):
+LEMMA A6. Let r∈ N, and α∗,ϵ,γ> 0 be given. Assume that
+cmplx(Sϵ)≥ 1
+2
+(
+Dα∗r+r/γ Dϵ
+⎞−γ D/r
+,
+for any D of the form D = 2k, k ∈ N, and whenever Dα∗rϵ≤ ϵ. Fix a small parameter δ> 0. There
+exist˜ϵ, c > 0, depending only on r,α∗,γ ,ϵ,δ, such that
+cmplx(Sϵ)≥ exp
+(
+cϵ−1/(α∗+δ)r
+⎞
+, ∀ϵ≤˜ϵ.
+♦
+Proof. Write ϵ= e−β for β ∈ R. Fix a small parameter δ> 0. Since we restrict attention to ϵ≤˜ϵ,w e
+have
+(
+eβϵ
+⎞−1/(α∗+δ)r
+≥
+(
+eβ˜ϵ
+⎞−1/(α∗+δ)r
+= 1,
+provided that˜ϵ≤ ϵ.G i v e nϵ≤˜ϵ, choose k∈ N, such that
+2k−1 <
+(
+eβϵ
+⎞−1/(α∗+δ)r
+≤ 2k.
+Let D= 2k. Note that this defines a function D= D(ϵ). For any ϵ, we can write
+D(ϵ)= ξ
+(
+eβϵ
+⎞−1/(α∗+δ)r
+, (A.15)
+for some ξ ∈ (1/2, 1]. We now note that for ϵ≤˜ϵ,
+1
+γ D =
+(
+eβϵ
+⎞1/(α∗+δ)r
+γξ ≤ 2
+(
+eβ˜ϵ
+⎞1/(α∗+δ)r
+γ .
+Decreasing the size of ˜ϵ=˜ϵ(r,γ ,α∗,ϵ,δ) further, we can ensure that for ϵ≤˜ϵ,
+1
+γ D(ϵ)≤ 2
+(
+eβ˜ϵ
+⎞1/(α∗+δ)r
+γ ≤ δ
+2 .
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 49 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 695
+Note also that 2 r/γ D ≤ 2δr/2 ≤ Dδr/2 for any D of the form D= 2k, k∈ N. It thus follows that for any
+given ϵ≤˜ϵ, and with our particular choice of D= D(ϵ)satisfying (A.15), we have
+2r/γ DDα∗r+r/γ Dϵ≤ D(α∗+δ)rϵ= e−βξ(α∗+δ)r ≤ e−β .
+Note that this in particular implies that Dα∗rϵ≤ e−β = ϵ. We conclude that
+cmplx(Sϵ)≥ 1
+2(Dα∗r+r/γ Dϵ)−γ D/r
+= (2r/γ DDα∗r+r/γ Dϵ)−γ D/r
+≥ (D(α∗+δ)rϵ)−γ D/r
+≥ exp
+( βγ D
+r
+⎞
+= exp
+(
+βγξ e−1/(α∗+δ)r
+r ϵ−1/(α∗+δ)r
+⎞
+≥ exp
+(
+βγ e−1/(α∗+δ)r
+2r ϵ−1/(α∗+δ)r
+⎞
+.
+Upon defining c= c(r,γ ,α∗,ϵ,δ) as
+c := βγ e−1/(α∗+δ)r
+2r ,
+we obtain the lower bound
+cmplx(Sϵ)≥ exp
+(
+cϵ−1/(α∗+δ)r
+⎞
+, ∀ϵ≤ ϵ.
+This concludes the proof of Lemma A6. □
+In the lemma below, we provide a simple result on Fréchet differentiability which was used in our
+proof of Proposition 2.11:
+LEMMA A7 (Fréchet differentiability of a series). Assume that we are given a bounded family of functions
+fD ∈ Cr(RD) indexed by integers D = 2k, k ∈ N, such that ∥fD∥Cr(RD) ≤ 1 for all D.L e t e∗
+1, e∗
+2,··· :
+X → R be a sequence of linear functionals, such that ∥e∗
+j∥X∗ ≤ M for all j∈ N.L e t c,α> 0b eg i v e n ,
+and assume that α∗ > 1+ α. Then, the functional S† : X → R defined by the series
+S†(u) :=
+∞∑
+k=1
+2−α∗rkf2k
+(
+c2αk(e∗
+2k (u),... , e∗
+2k+1−1(u))
+⎞
+,
+is r-times Fréchet differentiable. ♦
+Proof. By assumption on f2k and the linearity of the functionals e∗
+j , each nonlinear functional Fk(u) :=
+f2k
+(
+c2αk(e∗
+2k (u),... , e∗
+2k+1−1(u))
+⎞
+in the series defining S† is r-times continuously differentiable. Fixing
+u ∈ X , let us denote x = c2αk(e∗
+2k (u),... , e∗
+2k+1−1(u)).T h e ℓth total derivative dℓFk of Fk (ℓ≤ r)i s
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 50 ===
+696 S. LANTHALER AND A. M. STUART
+given by
+dℓFk(u)[v1,... , vℓ]= cℓ2αℓk
+2k
+∑
+j1,...,jℓ=1
+∂ℓf2k (x)
+∂xj1 ...∂ xjℓ
+ℓ∏
+s=1
+e∗
+2k+js−1(vs).
+By assumption, we have
+⏐⏐⏐⏐
+⏐
+∂
+ℓf2k (x)
+∂xj1 ...∂ xjℓ
+⏐⏐⏐⏐
+⏐≤ 1.
+Since the sum over j1,... , jℓ has 2 kℓ terms, and since the functionals are bounded ∥e∗
+j∥≤ M by
+assumption, we can now readily estimate the operator norm ∥dℓFk(u)∥for ℓ≤ r by
+∥dℓFk(u)∥≤cℓ2αℓk2kℓMℓ≤ (cM)r2(α+1)rk.
+In particular, for any ℓ≤ r, the series
+∞∑
+k=1
+2−α∗rk∥dℓFk(u)∥≤
+∞∑
+k=1
+2−[α∗−(α+1)]rk(cM)r <∞,
+is uniformly convergent. Thus, S† is a uniform limit of r-times continuously differentiable functionals,
+all of whose derivatives of order ℓ≤ r are also uniformly convergent. From this, it follows that S† is
+itself r-times continuously Fréchet differentiable. □
+A.4 Proof of Corollary 2.12
+Let Y = Y(Ω; Rp) be a function space with continuous embedding in C(Ω; Rp). We will only consider
+the case p = 1, the case p > 1 following by an almost identical argument; Let φ ̸= 0 ∈ Y be a
+nontrivial function. Since Y = Y(Ω) is continuously embedded in C(Ω), it follows that point evaluation
+evy(φ) = φ(y) is continuous. Given that φ is nontrivial, there exists y∈ Ω, such that ev y(φ) ̸= 0. We
+may wlog assume that ev y(φ) = φ(y) = 1. Let F† : X → R be a functional exposing the curse
+of parametric complexity, as constructed in Theorem 2.11. We define an r-times Fréchet differentiable
+operator S† : X → Y by S†(u) := F†(u)φ.
+The claim now follows immediately by observing that
+evy ◦ S†(u)= F†(u), ∀ u∈ X ,
+and by noting that if Sϵ : X → Y is an operator of neural network-type, then ev y ◦ Sϵ : X → R is a
+functional of neural network-type, and by assumption, with C :=∥evy∥Y→R,
+sup
+u∈K
+|F†(u)− evy ◦ Sϵ(u)|= sup
+u∈K
+|evy ◦ S†(u)− evy ◦ Sϵ(u)|
+≤ sup
+u∈K
+C∥S†(u)− Sϵ(u)∥Y
+≤ Cϵ.
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 51 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 697
+By our choice of F† : X → R, this implies that the complexity of ev y ◦ Sϵ is lower bounded by an
+exponential bound≥ exp(cϵ−1/(α+1+δ)r) for some constant c= c(α,δ, r). This in turn implies that
+cmplx(Sϵ)= sup
+y∈Ω
+cmplx(evy ◦ Sϵ)≥ exp(cϵ−1/(α+1+δ)r).
+This lower bound implies the exponential lower bound of Corollary 2.12.
+A.5 Proofs of Lemmas 2.18–2.7
+A.5.1 Proof of Lemma 2.18
+Proof (Lemma 2.18). We want to show that a PCA-Net neural operator S = R◦ Ψ ◦ E is of neural
+network-type, and aim to estimate size (Ψ ) in terms of cmplx (S). To this end, we assume that Y =
+Y(Ω; Rp) is a Hilbert space of functions. Since R is by definition linear, then given an evaluation point
+y ∈ Ω, the mapping β ↦→ R(β)(y) ≡ evy ◦ R(β) defines a linear map ev y ◦ R : RDY → Rp.W e
+can represent ev y ◦ R by matrix multiplication: ev y ◦ R(β) = Vyβ, with Vy ∈ Rp×DY . The encoder
+E : X → RDX is linear by definition, thus we can take L := E for the linear map in the definition
+of ‘operator of neural network-type’. Define a neural network Φy : RDX → Rp by Φy(α) = VyΨ( α).
+Then, we have the identity
+evy ◦ S(u)= (evy ◦ R)◦ Ψ( Eu)= Φy(Lu),
+for all u∈ X . This shows that S is of neural network-type. We now aim to estimate cmplx (S) in terms
+of size(Ψ ). To this end, write Ψ( α)= [Ψ1(α),... ,ΨDY (α)] with component mappings Ψj : RDX → R.
+Let J =
+{
+j
+⏐⏐⏐j∈{ 1,... , DY}, Ψj ̸= 0
+}
+be the subset of indices for which Ψj : RDX → R is not the zero
+function. Define a (sparsified) matrix ˆVy ∈ Rp×DY with jth column [ˆVy]:,j defined by
+[ˆVy]:,j :=
+{
+[Vy]:,j, j∈ J ,
+0 j /∈ J .
+Then, we have∥ˆVy∥0 ≤ p|J|≤ p size(Ψ ), and identity Φy(α)= ˆVyΨ( α) for all α∈ RDX . Thus, using
+the concept of sparse concatenation (2.3), we can upper bound the complexity, cmplx(S), in terms of the
+size(Ψ )of the neural network Ψ as follows:
+cmplx(S)≤ sup
+y
+size(Φy)≤ sup
+y
+2∥Vy∥0 + 2size(Ψ )≤ 2(p+ 1)size(Ψ ).
+This is the claimed lower bound on size (Ψ ). □
+A.5.2 Proof of Lemma 2.20
+Proof (Lemma 2.20). We observe that with D := DX , for any y∈ Ω the encoder L := E : X → RD is
+linear, and
+evy ◦ S(u)= Φy(Lu), ∀ u∈ X ,
+where Φy(α) = ∑ DY
+j=1 Ψj(α)φj(y) defines a neural network, Φy : RD → Rp. Thus, DeepONet S =
+R◦ Ψ ◦ E is of neural network-type. To estimate the complexity, cmplx (S),w el e t J 2 be the set of
+indices (i, j)∈{ 1,... , DY}2, such that the ith component, [φj(y)]i, of the vector φj(y)∈ Rp is nonzero.
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 52 ===
+698 S. LANTHALER AND A. M. STUART
+Let ˆVy ∈ Rp×DY be the matrix with entries [ ˆVy]i,j = [φj(y)]i, so that Φy(α) = ˆVyΨ( α) for all α.N o t e
+thatˆVy has precisely|J 2| nonzero entries, and that |J 2|≤ size(φ), since [φj(y)]i ̸= 0 is nonzero for all
+(i, j)∈ J 2. Thus, it follows that
+cmplx(S)≤ sup
+y
+size(Φy)≤ 2|J 2|+ 2s i z e(Ψ )≤ 2(size(φ)+ size(Ψ )).
+□
+A.5.3 Proof of Lemma 2.22
+Proof (Lemma 2.22). To see the complexity bound, we recall that for any y ∈ Ω, we can choose
+Φy(· ) := Q(Ψ (· ), y) to obtain the representation
+evy ◦ S(u)= Φy(Lu),
+where Lu≡ E(u) is given by the linear encoder. The composition of two neural networks Q(· , y) and
+Ψ(· ) can be represented by a neural network of size at most 2 size (Ψ )+ 2s i z e(Q(· , y))≤ 2s i z e(Ψ )+
+2s i z e(Q). We thus have the lower bound,
+cmplx(S)≤ sup
+y
+size(Φy)≤ 2size(Q)+ 2size(Ψ ).
+This shows the claim. □
+A.6 Proof of Lemma 2.26
+Proof. Our aim is to show that S : L2(T; R)→ R,
+S(u) :=
+∫
+T
+σ( u(x)) dx,
+is not of neural network-type. We argue by contradiction. Suppose that S was of neural network type.
+By definition, there exists a linear mapping L : L2(T; R)→ Rℓ, and a neural network Φ : Rℓ→ R,f o r
+some ℓ∈ N such that
+S(u)= Φ(Lu). (A.16)
+In the following we will consider ϕj(x) := sin(jx) for j∈ N. Since σ( t)≥ 0 for all t∈ R, and σ( t)> 0
+for t > 0, we have
+S(u)=
+∫
+Ω
+σ( u(x)) dx= 0 ⇐⇒ u(x)≤ 0, ∀x∈ [0, 2π ]. (A.17)
+Now, fix any D >ℓ , and consider ι : RD → L2(T; R), ιβ := ∑ D
+j=1 βj sin(jx). Since ι and L are linear
+mappings, it follows that
+L◦ ι : RD → Rℓ, β↦→ Lιβ,
+is a linear mapping. Represent this linear mapping by a matrix W ∈ Rℓ×D. In particular, by ( A.16), we
+have
+S(ιβ)= Φ(Wβ), ∀β∈ RD. (A.18)
+Since D >ℓ ,i tf o l l o w st h a tk e r(W) ̸={ 0} is nontrivial. Let β ̸= 0 be an element in the kernel, and
+consider uβ(x) := ιβ(x) = ∑ D
+j=1 βj sin(jx). Since uβ(x) is not identically equal to 0, either uβ(x) or
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 53 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 699
+−uβ(x)= u−β(x) must be positive somewhere in the domain T. Upon replacing β →− β if necessary,
+we may wlog assume that uβ(x)> 0f o rs o m ex∈ T.F r o m(A.17) and ( A.18), it now follows that
+0̸= S(uβ)= S(ιβ)= Φ(Wβ)= Φ(0)= S(0)= 0.
+A contradiction. Thus, S cannot be of neural network-type. □
+A.7 Proof of curse of parametric complexity for FNO, Theorem 2.27
+Building on the curse of parametric complexity for operators of neural network-type, we next show that
+FNOs also suffer from a similar curse, as stated in Theorem 2.27.
+Proof (Theorem 2.27). Let S† : X → R be an r-times Fréchet differentiable functional satisfying the
+conclusion of Theorem 2.11 (CoD for functionals of neural network-type). In the following, we show
+that S† also satisfies the conclusions of Theorem 2.27. Our proof argues by contradiction: we assume
+that S† can be approximated by a family of discrete FNOs satisfying the error and complexity bounds
+of Theorem 2.27, i.e.,
+1. Complexity bound: There exist constant c > 0, such that the discretization parameter Nϵ ∈
+N, and the total number of nonzero parameters size (SNϵ
+ϵ ) are bounded by Nϵ,s i z e(SNϵ
+ϵ ) ≤
+exp(cϵ−1/(1+α+δ)r), for all ϵ≤ ϵ.
+2. Accuracy: We have
+sup
+u∈K
+⏐⏐⏐S†(u)− SNϵ
+ϵ (u)
+⏐⏐⏐≤ ϵ, ∀ϵ> 0.
+Then we show that this implies the existence of a family of operators of neural network-type ˜Sϵ,
+which satisfy for some δ′> 0, and for all sufficiently small ϵ> 0,
+• complexity bound cmplx(˜Sϵ)≤ exp(cϵ−1/(1+α+δ′)r),
+• and error estimate max u∈K
+⏐⏐S†(u)− ˜Sϵ(u)
+⏐⏐≤ ϵ,
+with c > 0 a potentially different constant. By choice of S†, the existence of ˜Sϵ is ruled out by Theorem
+2.11, providing the desired contradiction.
+In the following, we discuss the construction of˜Sϵ:L e tSNϵ
+ϵ be a family of FNOs satisfying (1) and (2)
+above. Fixϵ> 0 for the moment. To simplify notation, we will writeN= Nϵ, in the following. We recall
+that, by definition, the discretized FNO SN
+ϵ can be written as a composition SN
+ϵ = ˜Q◦ LL◦···◦ L1◦ R,
+where
+R : u(x)↦→ χ( xj1,...,jd , u(xj1,...,jd )),
+and
+˜Q :
+(
+vj1,...,jd
+⎞
+↦→ 1
+Nd
+∑
+j1,...,jd
+q(yj1,...,jd , vj1,...,jd ),
+are defined by neural networks χ and q, respectively, Lℓ is of the form
+Lℓ : v↦→ σ
+(
+Wℓv+ F−1
+N
+(ˆTℓFN v
+⎞
++ bℓ
+⎞
+, v=
+(
+vj1,...,jd
+⎞N
+j1,...,jd=1
+,
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 54 ===
+700 S. LANTHALER AND A. M. STUART
+with Wℓ ∈ Rdv×dv , Fourier multiplier ˆTℓ ={ [ˆTℓ]k}∥k∥ℓ∞≤kmax , where [ˆTℓ]k ∈ Cdv×dv , and FN (F−1
+N )
+denote discrete (inverse) Fourier transform, and where the bias b is determined by its Fourier coefficients
+ˆbk,∥k∥ℓ∞ ≤ kmax. We also recall that the size of SN
+ϵ is given by the total number of nonzero components,
+i.e.,
+size(SN
+ϵ )= size(χ)+ size(q)+
+L∑
+ℓ=1
+⎧
+⎨
+⎩∥Wℓ∥0 +∥ˆTℓ∥0 +
+∑
+∥k∥ℓ∞≤kmax
+∥ˆbk∥0
+⎫
+⎬
+⎭ .
+We now observe that, after flattening the tensor
+(
+vj1,...,jd
+⎞
+∈ RN×···×N×dv ≃RdvNd
+,
+the (linear) mapping v↦→ Wℓv can be represented by multiplication against a sparse matrix with at most
+∥Wℓ∥0Nd nonzero entries. For the nonlocal operator F−1
+N ˆTℓFN , we note that for v∈ RdvNd
+, the number
+κ of components (channels) that need to be considered is bounded by κ ≤ min(dv,∥ˆTℓ∥0) ≤∥ˆTℓ∥0.
+Discarding any channels that are zeroed out by ˆTℓ, a naive implementation of F−1
+N ˆTℓFN thus amounts
+to a matrix representation of a linear mapping RκNd
+→ RκNd
+, requiring at most κ2N2d ≤∥ˆTℓ∥2
+0N2d
+nonzero components. Thus, each discretized hidden layer Lℓ can be represented exactly by an ordinary
+neural network layer Lℓ= σ( Aℓv+ cℓ) with matrix Aℓ∈ RdvNd×dvNd
+and bias cℓ∈ RdvNd
+, satisfying
+the following bounds on the number of nonzero components:
+∥Aℓ∥0 ≤∥Wℓ∥0Nd +∥ˆTℓ∥2
+0N2d, ∥cℓ∥0 ≤
+∑
+|k|≤kmax
+∥[ˆbℓ]k∥0Nd.
+Similarly, the input and output layers R and ˜Q can be represented exactly by ordinary neural networks
+R : RkNd
+→ RdvNd
+and Q : RdvNd
+→ R, with
+size(R)≤ Ndsize(χ) ,s i z e (Q)≤ Ndsize(q),
+obtained by parallelization of χ , resp. q, at each grid point. Given the above observations, we conclude
+that, with canonical identification RN×···×N×k ≃RkNd
+and RN×···×N×p ≃RpNd
+, the discretized FNO
+SN
+ϵ can be represented by an ordinary neural network Φ : RkNd
+→ RpNd
+, Φ = Q◦ LL ◦···◦ L1 ◦ R,
+with
+size(Φ)≤
+L∑
+ℓ=1
+⎧
+⎨
+⎩∥Wℓ∥0Nd +∥ˆTℓ∥2
+0N2d +
+∑
+|k|≤kmax
+∥ˆbk∥0Nd
+⎫
+⎬
+⎭
++ Ndsize(χ)+ Ndsize(q)
+≤ N2dsize(SN
+ϵ )2.
+By assumption on SN
+ϵ (for which we aim to show that it leads to a contradiction), we have size (SN
+ϵ )≤
+exp(cϵ−1/(1+α+δ)r), and Nϵ≤ exp(cϵ−1/(1+α+δ)r). It follows that
+size(Φ)≤ N2dsize(SN
+ϵ )2 ≤ exp((2d+ 2)cϵ−1/(1+α+δ)r).
+In addition, Φ trivially defines an operator of neural network-type, ˜Sϵ : Cs(Ω; Rk)→ R,b y
+˜Sϵ(u) := Φ
+(
+(u(xj1,...,jd ))N
+j1,...,jd=1
+⎞
+.
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 55 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 701
+To see this, we simply note that the point-evaluation mapping L : u↦→ u(xj1,...,jd )N
+j1,...,jd=1 is linear, and
+hence we have the representation
+˜Sϵ(u)= Φ(Lu).
+By the above construction, we have ˜Sϵ(u)≡ SNϵ
+ϵ (u) for all input functions u.
+To summarize, assuming that a family of FNOs SNϵ
+ϵ exists, satisfying (1) and (2) above, we have
+constructed a family ˜Sϵ of operators of neural network type, with
+sup
+u∈K
+⏐⏐
+⏐S
+†(u)− ˜Sϵ(u)
+⏐⏐
+⏐= sup
+u∈K
+⏐⏐
+⏐S
+†(u)− SNϵ
+ϵ (u)
+⏐⏐
+⏐≤ ϵ,
+and
+cmplx(˜Sϵ)≤ size(Φ)≤ exp(c′′ϵ−1/(1+α+δ)r),
+where c′′= (2d+ 2)c > 0 is a constant independent of ϵ.
+By Theorem 2.11, and fixing any 0 <δ ′<δ , we also have the following lower bound for all
+sufficiently small ϵ:
+exp(c′ϵ−1/(1+α+δ′)r)≤ cmplx(˜Sϵ),
+where c′> 0 is independent of ϵ. From the above two-sided bounds, it thus follows that
+exp(c′ϵ−1/(1+α+δ′)r)≤ cmplx(˜Sϵ)≤ exp(c′′ϵ−1/(1+α+δ)r),
+for all ϵsufficiently small, and where by our choice of δ′,δ:0 < 1+ α+ δ′< 1+ α+ δ and c′, c′′> 0
+are constants. Since ϵ−1/(1+α+δ′)r grows faster than ϵ−1/(1+α+δ)r as ϵ→ 0, this leads to the desired
+contradiction. We thus conclude that a family SNϵ
+ϵ of discretized FNOs as assumed above cannot exist.
+This concludes the proof. □
+Appendix B. Short-time existence of Cr-solutions
+The proof of short-time existence of solutions of the Hamilton–Jacobi equation ( HJ) is based on the
+following Banach space implicit function theorem:
+THEOREM B1 (Implicit Function Theorem, see e.g., ( Chow & Hale , 2012, section 2.2)). Let U ⊂ X,
+V ⊂ Y be open subsets of Banach spaces X and Y.L e t
+F : U× V → Z, (u, v)↦→ F(u, v),
+be a Cp-mapping (p-times continuously Fréchet differentiable). Assume that there exist (u0, v0)∈ U× V
+such that F(u0, v0)= 0, and such that the Jacobian with respect to v, evaluated at the point (u0, v0),
+DvF(u0, v0) : X→ Z,
+is a linear isomorphism. Then there exists a neighbourhood U0 ⊂ U of u0, and a Cp-mapping ψ : U0 →
+V, such that
+F(u,ψ(u))= 0, ∀ u∈ U0.
+Furthermore, ψ is unique, in the sense that for any u∈ U0, F(u, v)= 0 implies v= ψ(u). ♦
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 56 ===
+702 S. LANTHALER AND A. M. STUART
+As a first step towards proving short-time existence for ( HJ), we prove that under the no-blowup
+Assumption 3.1, the semigroup Ψ †
+t (3.7) exists for any t≥ 0.
+Proof (Lemma 3.3). By classical ODE theory, it is immediate that for any initial data (q0, p0, z0) ∈
+Ω × Rd × R a maximal solution of the ODE system ( 3.4) exists, and is unique, over a short time-
+interval. It thus remains to prove that this solution in fact exists globally, i.e., that the solution does not
+escape to infinity in finite time. Since z solves˙z= L(q, p), with a right-hand side that only depends on
+q and p, it will suffice to prove that the Hamiltonian trajectory ˙q =∇ pH(q, p), ˙p =− ∇qH(q, p) with
+initial data (q0, p0) exists globally in time. To this end, we note that, by Assumption 3.1,w eh a v e
+d
+dt(1+| p|2)= 2p·˙p=− 2p·∇ qH(q, p)≤ 2LH(1+| p|2).
+Gronwall’s lemma thus implies that |p|≤
+√
+1+| p0|2 exp(LH t) remains bounded for all t ≥ 0. This
+shows that blow-up cannot occur in the p-variable in a finite time. On the other hand, the right-hand
+side of the ODE system is periodic in q, and hence (by the bound on p) blow-up is also ruled out for q.
+In particular, Assumption 3.1 ensures that the Hamiltonian trajectory t↦→ (q(t), p(t)) exists globally in
+time. As argued above, this in turn implies the global existence of the flow map t↦→ Ψ †
+t . □
+We now apply the Implicit Function Theorem B.1 to prove Lemma 3.4.
+Proof (Lemma 3.4). Let X= Cr
+per(Ω)× Rd × R with r≥ 2. Define
+F : X× Rd → Rd, (u0, q, t; q0)↦→ q− qt(q0,∇qu0(q0)),
+i.e., we set
+F(u0, q, t; q0) := q− qt(q0,∇qu0(q0)),
+with qt : Ω× Rd → Ω, (q0, p0) ↦→ qt(q0, p0) the spatial characteristic mapping of the Hamiltonian
+system ( 3.4) at time t ≥ 0, where, recall, we have assumed that u0 ∈ F. Under Assumption 3.1,t h e
+spatial characteristic mapping, and hence F, is well-defined for any t ≥ 0 (see Lemma 3.3). Since
+H ∈ Cr+1(Ω × Rd), the mapping Ω × Rd × R → Ω, (q0, p0, t) ↦→ qt(q0, p0) is Cr. The mapping
+F1 : Ω × Cr
+per(Ω) → Rd, (q0, u0) ↦→ F1(q0, u0) :=∇ qu0(q0) is Cr−1 in the first argument, and is
+a continuous linear mapping in the second argument (and hence infinitely Frechet differentiable in the
+second argument). Hence, the composition
+(q0, u0)↦→ (q0,∇qu0(q0))↦→ qt(q0,∇qu0(q0)),
+is a Cr−1 mapping. And, as a consequence, the mapping F : X× Rd → Rd is a Cr−1 mapping.
+Since
+F(u0, q, t; q0)= q− qt(q0,∇qu0(q0)),
+we clearly have
+F(u0, q0,0 ; q0)= 0,
+for any q0 ∈ Ω and u0 ∈ Cr
+per(Ω), and the derivative with respect to the last argument
+Dq0 F(u0, q0,0 ; q0) : Rd → Rd,
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 57 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 703
+is given by
+Dq0 F(u0, q0,0 ; q0)= Dq0
+[
+q− q0
+]
+=− 1d×d,
+which defines an isomorphism Rd → Rd.
+By the implicit function theorem, for any q0 ∈ Ω and u0 ∈ Cr
+per(Ω), there exist ϵ= ϵ(q0, u0), r=
+r(q0, u0), t∗ = t∗(q0, u0)> 0, and a mapping
+ψq0,u0 : Bϵ(q0)× Br(u0)× [0, t∗)→ Rd,
+such that F(q, u0, t; q0)= 0f o r
+(q, u0, t)∈ Bϵ(q0)× Br(u0)× [0, t∗),
+if, and only if,
+q0 = ψq0,u0 (q, u0, t).
+Fix u0 ∈ Cr
+per(Ω) for the moment. Since Ω is compact, we can choose a finite number of points
+q(1)
+0 , ... , q(m)
+0 , such that
+Ω ⊂
+m⋃
+j=1
+Bϵ(qj
+0,u0)(qj
+0).
+Let
+t∗(u0) := min
+j=1,...,m
+t∗(qj
+0, u0),
+r(u0) := min
+j=1,...,m
+r(qj
+0, u0).
+Due to the uniqueness property of each ψqj
+0,u0
+, j= 1,... , m, all of these mappings have the same values
+on overlapping domains. Hence, we can combine them into a single map
+ψu0 : Ω× Br(u0)(u0)× [0, t∗(u0))→ Rd.
+Furthermore, since ψqj
+0,u0
+∈ Cr−1,w ea l s oh a v eψu0 ∈ Cr−1. Similarly, we can cover the compact set
+F ⊂ Cr
+per(Ω) by a finite number of open balls Br(u(k)
+0 )(u(k)
+0 ), k= 1,... , K,
+F ⊂
+K⋃
+k=1
+Br(u(k)
+0 )(u(k)
+0 ).
+Setting T∗ := mink=1,...,K t∗(u(k)
+0 )> 0, the uniqueness property of ψu(k)
+0
+again implies that these
+mappings agree on overlapping domains. Hence, we can combine them into a global map, and obtain a
+map
+ψ : Ω× F× [0, T∗)→ Rd,
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 58 ===
+704 S. LANTHALER AND A. M. STUART
+which satisfies F(q, u0, t; ψ(q, u0, t))= 0 for all q∈ Ω, u0 ∈ F and t < T∗. Furthermore, this ψ is still
+a Cr−1 map and it is unique, in the sense that
+F(q, u0, t; q0)= 0 ⇔ q0 = ψ(q, u0, t), ∀ q∈ Ω, u0 ∈ Cr
+per(Ω), t < T∗,
+i.e., for any u0 ∈ F and t ∈ [0, T∗),w eh a v eq = qt(q0,∇qu0(q0)) if and only if q0 = ψ(q, u0, t).I n
+particular, this shows that for any u0 ∈ F, t∈ [0, T∗),t h e Cr−1-mapping
+Φ†
+t (· ; u0) : Ω → Ω, q0 ↦→ Φ†
+t (q0; u0) := qt(q0,∇qu0(q0)),
+is invertible, with inverse q↦→ ψ(q, u0, t)∈ Cr−1. This implies the claim. □
+Next, we apply Lemma 3.4 to prove short-time existence of solutions for ( HJ).
+Proof (Proposition 3.2). Let T∗ be the maximal time such that the spatial characteristic mapping Φ†
+t,u0 :
+Ω → Ω, q0 ↦→ qt(q0,∇qu0(q0)) is invertible, for any t∈ [0, T∗) and for all u0 ∈ F.W eh a v eT∗ > 0,
+by Lemma 3.4. We denote by Φ†
+−t,u0 : Ω → Ω the inverse Φ†
+−t,u0 := [Φ†
+t,u0 ]−1. By the method of
+characteristics, a solution u(q, t) of the Hamilton–Jacobi equations must satisfy
+u(q, t)= u0(q0)+
+∫t
+0
+L(qτ , pτ ) dτ , L(q, p) := p·∇ pH(q, p)− H(q, p),( B . 1 )
+where q0 = Φ†
+−t,u0 (q), qτ , pτ are the trajectories of the Hamiltonian ODE ( 3.1) with initial data
+q0,∇qu0(q0). Given a fixed u0 ∈ F, we use the above expression to define u : Ω× [0, T∗)→ R.
+We first observe that u∈ Cr−1(Ω× [0, T∗)), as it is the composition of Cr−1 mappings,
+u(q, t)= u0(q0)+
+∫t
+0
+L(qτ (q0, p0), pτ (q0, p0)) dτ ,
+where q0 = Φ−t,u0 (q), p0 =∇ qu0(Φ−t,u0 (q)) are Cr−1-functions of q. In particular, since r ≥ 2, this
+implies that u is at least C1. Evaluating du(qt, t)/dt along a fixed trajectory, we find that
+∂tu(qt, t)+ H(qt, pt)=
+(
+pt −∇ qu(qt, t)
+⎞
+· DpH(qt, pt).( B . 2 )
+Thus, to show that u is a classical solution of ( HJ), it remains to show that pt =∇ qu(qt, t) for all t ∈
+[0, T∗). Assume that u∈ C2
+per for the moment. We first note that for the jth component of pt−∇ qu(qt, t),
+we have (with implicit summation over repeated indices, following the ‘Einstein summation rule’)
+d
+dt
+[
+pj
+t − ∂qj u(qt, t)
+]
+=− ∂qj H(qt, pt)− ∂2
+qj,qk u(qt, t)∂pk H(qt, pt)
+− ∂qj∂tu(qt, t).
+Next, we note that by the invertibility of the spatial characteristic mapping q0 ↦→ qt, we can write ( B.2)
+in the form
+∂tu(q, t)=− H(q, P(q, t))+
+(
+P(q, t)−∇ qu(q, t)
+⎞
+· DpH(q, P(q, t)),
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 59 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 705
+where P(q, t) := pt
+(
+Φ†
+−t,u0 (q),∇qu0(Φ†
+−t,u0(q))
+⎞
+. This implies that
+∂qj∂tu(q, t)=− ∂qj H(q, P(q, t))− ∂pk H(q, P(q, t))∂qj Pk(q, t)
++
+(
+∂qj Pk(q, t)− ∂2
+qj,qk u(q, t)
+⎞
+· ∂pk H(q, P(q, t))
++
+(
+Pk(q, t)− ∂qk u(q, t)
+⎞
+· ∂qj
+[
+∂pk H(q, P(q, t))
+]
+=− ∂qj H(q, P(q, t))− ∂2
+qj,qk u(q, t)· ∂pk H(q, P(q, t))
++
+(
+Pk(q, t)− ∂qk u(q, t)
+⎞
+· Aj,k(q, P(q, t)).
+We point out that on the last line, we have introduced Aj,k(q, t) := ∂qj
+[
+∂pk H(q, P(q, t))
+]
+which is a
+continuous function of q and t. Choosing now q= qt, so that P(q, t)= pt, we thus obtain
+∂qj∂tu(qt, t)=− ∂qj H(qt, pt)− ∂2
+qj,qk u(qt, t)· ∂pk H(qt, pt)
++
+[
+pk
+t − ∂qk u(qt, t)
+]
+· Aj,k(q, t).
+Substitution in the ODE for pt −∇ qu(qt, t) yields
+d
+dt
+[
+pt −∇ qu(qt, t)
+]
+=− A(qt, t)·
+[
+pt −∇ qu(qt, t)
+]
+,
+where A(qt, t) is the matrix with components (Aj,k(qt, t)). Since [ pt −∇ qu(qt, t)]|t=0 = 0, this implies
+that
+pt =∇ qu(qt, t), ∀ t∈ [0, T∗),( B . 3 )
+along the trajectory. At this point, the conclusion ( B.3) has been obtained under the assumption that
+u∈ C2
+per, which is only ensured ap r i o r iif r≥ 3.
+To prove the result also for the case r = 2, we can apply the above argument to smooth Hϵ, uϵ
+0,
+which approximate the given H and u0, and for uϵ defined by the method of characteristics ( B.1) with
+u0, H replaced by the smooth approximations uϵ
+0, Hϵ. Then, by the above argument, for anyϵ-regularized
+trajectory (qϵ
+t , pϵ
+t ),w eh a v e
+pϵ
+t =∇ quϵ(qϵ
+t , t).
+Choosing a sequence such that Hϵ Cr+1
+→ H, uϵ
+0
+Cr
+→ u0 as ϵ→ 0, the corresponding characteristic solution
+uϵ defined by ( B.1) (with Hϵ and uϵ
+0 in place of H and u0) converges in Cr−1. Since r− 1 = 1, this
+implies that pt = limϵ→0 pϵ
+t = limϵ→0∇quϵ(qϵ
+t , t)=∇ qu(qt, t).
+Thus, we conclude that u ∈ Cr−1(Ω × [0, T∗)) defined by ( B.1) is a classical solution of the
+Hamilton–Jacobi equations ( HJ). We finally have to show that, in fact, u ∈ Cr
+per(Ω × [0, T∗)).
+Cr-differentiability in space follows readily from the fact that, by ( B3), we have ∇qu(qt, t) =
+pt(q0,∇qu0(q0)). By the invertibility of the spatial characteristic map, this can be equivalently written
+in the form
+∇qu(q, t)= pt(Φ†
+−t,u0(q),∇qu0(Φ†
+−t,u0 (q))),( B . 4 )
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 60 ===
+706 S. LANTHALER AND A. M. STUART
+where on the right-hand side, (q0, p0) ↦→ pt(q0, p0), q0 ↦→∇ qu0(q0) and (q, t) ↦→ Φ†
+−t,u0 (q, t) are all
+Cr−1 mappings. Thus,∇qu is a Cr−1-function. Furthermore, by (HJ), this implies that ∂tu=− H(q,∇qu)
+is also a Cr−1 function. This allows us to conclude that u∈ Cr
+per(Ω× [0, T∗)). The additional bound on
+∥u(· , t)∥Cr follows from the trivial estimate
+∥u(· , t)∥Cr ≤ C
+(
+∥u∥L∞ +∥∇qu(· , t)∥Cr−1
+⎞
+,
+combined with ( B.1) and ( B.4), and the fact that q ↦→ Φ†
+−t,u0 (q) is a Cr−1 mapping with continuous
+dependence on u0 ∈ F and t∈ [0, T], and (q0, p0)↦→ pt(q0, p0) is a Cr-mapping, so that
+∥∇qu(· , t)∥Cr−1 ≤ sup
+t∈[0,T]
+sup
+u0∈F
+∥pt(Φ†
+−t,u0 (· ),∇qu0(Φ†
+−t,u0(· )))∥Cr−1 <∞,
+for any initial data u0 ∈ F. □
+Appendix C. Reconstruction from scattered data
+The purpose of this appendix is to prove Proposition4.2. This is achieved through three lemmas, followed
+by the proof of the proposition itself, employing these lemmas.
+The first lemma is the following special case of the Vitali covering lemma, a well-known geometric
+result from measure theory (see e.g. ( Stein & Shakarchi, 2009 , Lemma 1.2)):
+LEMMA C1. (Vitali covering). If h > 0 and Q={ q1,... , qN} is a set for which the domain
+Ω ⊂
+N⋃
+j=1
+Bh(qj),
+is contained in the union of balls of radius h around the qj, then there exists a subset Q′={ qi1 ,... , qim}
+such that Bh(qik )∩ Bh(qiℓ)=∅ for all k,ℓ, and
+Ω ⊂
+m⋃
+k=1
+B3h(qik ).
+♦
+REMARK C2. Given Q ={ q1,... , qN}, the proof of Lemma C1 (see e.g. ( Stein & Shakarchi , 2009,
+Lemma 1.2)) shows that the subsetQ′⊂ Q of Lemma C1 can be found by the following greedy algorithm,
+which proceeds by iteratively adding elements to Q′(the following is in fact the basis for Algorithm 1
+in the main text):
+1. Start with j1 = 1 and Q′
+1 ={ q1}.
+2. Iteration step: given Q′
+m ={ qj1 ,... , qjm}⊂ Q, check whether there exists qk ∈ Q, such that
+Bh(qk)∩
+m⋃
+ℓ=1
+Bh(qjℓ)=∅ .
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 61 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 707
+• If yes: define jn+1 := k and Q′
+m+1 :={ qj1 ,... , qjm+1}.
+• If not: terminate the algorithm and set Q′:= Q′
+m ={ qj1 ,... , qjm}.
+♦
+B a s e do nL e m m aC.1, we can now state the following basic result:
+LEMMA C3. Given a set Q={ q1,... , qN}⊂ Ω with fill distance hQ,Ω , the subset Q′⊂ Q determined
+by the pruning Algorithm 1 has fill distance hQ′,Ω ≤ 3hQ,Ω and separation distance ρQ′≥ hQ,Ω , and Q′
+is quasi-uniform with distortion constant κ = 3, i.e.,
+ρQ′≤ hQ′,Ω ≤ 3ρQ′.
+♦
+Proof. By definition of hQ,Ω (cf. Definition 4.1), we have
+Ω ⊂
+N⋃
+j=1
+BhQ,Ω (qj).
+Let Q′={ qj1 , ... , qjm}⊂ Q be the subset determined by Algorithm 1 (reproduced in Remark C2). Q′
+satisfies the conclusion of the Vitali covering lemma C1 with h= hQ,Ω ; thus,
+Ω ⊂
+m⋃
+k=1
+B3h(qjk ),( C . 1 )
+and Bh(qjk )∩ Bh(qjℓ)=∅ for all k̸= ℓ. The inclusion ( C.1)i m p l i e st h a t
+hQ′,Ω = sup
+q∈Ω
+min
+k=1,...,m
+⏐⏐⏐q− qjk
+⏐⏐⏐≤ 3h= 3hQ,Ω .
+On the other hand, the fact that Bh(qjk )∩ Bh(qjℓ)=∅ implies that 1
+2
+⏐⏐qjℓ− qjk
+⏐⏐≥ h= hQ,Ω for all k̸= ℓ,
+and hence ρQ′≥ hQ,Ω .T h u s ,w eh a v e
+hQ′,Ω ≤ 3hQ,Ω ≤ 3ρQ′.
+The bound ρQ′≤ hQ′,Ω always holds (for convex sets); to see this, choose qjk , qjℓ such that ρQ′=
+1
+2
+⏐⏐qjk − qjℓ
+⏐⏐realizes the minimal separation distance. Let q be the mid-point 1
+2
+(
+qjk + qjℓ
+⎞
+, so that⏐⏐q− qjk
+⏐⏐=
+⏐⏐q− qjℓ
+⏐⏐= 1
+2
+⏐⏐qjk − qjℓ
+⏐⏐= ρQ′. We note that
+⏐⏐q− qjr
+⏐⏐≥ ρQ′for any qjr ∈ Q′, since
+2ρQ′≤
+⏐⏐
+⏐q
+jr − qjk
+⏐⏐
+⏐≤
+⏐⏐
+⏐q
+jr − q
+⏐⏐
+⏐+
+⏐⏐
+⏐
+q− qjk
+⏐⏐
+⏐=
+⏐⏐
+⏐
+q− qjr
+⏐⏐
+⏐+ ρ
+Q′,
+i.e.,
+⏐⏐q− qjr
+⏐⏐≥ ρQ′for r= 1,... , m. We conclude that
+ρQ′≤ min
+r=1,...,m
+⏐⏐
+⏐
+q− qjr
+⏐⏐
+⏐≤ sup
+q∈Q
+min
+r=1,...,m
+⏐⏐
+⏐q− q
+jr
+⏐⏐
+⏐= h
+Q′,Ω .
+□
+LEMMA C.4. Let Ω = [0, 2π ]d ⊂ Rd,l e t r ≥ 2 and let κ ≥ 1. There exists C = C(d, r,κ) > 0 and
+γ = γ( d, r, κ) > 0, such that for all f † ∈ Cr(Ω) and all Q⊂ Ω, quasi-uniform with respect to κ, and
+with fill distance hQ,Ω , the approximation error of the moving least squares interpolation (4.2) with exact
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 62 ===
+708 S. LANTHALER AND A. M. STUART
+data zj = f †(qj), and parameter δ := γ hz,Q, is bounded as follows:
+∥f † − fz,Q∥L∞ ≤ Chr
+Q,Ω∥f †∥Cr .
+♦
+Proof. This is immediate from ( Wendland, 2004, Corollary 4.8). □
+Based on Lemma C4, we can also derive a reconstruction estimate, when the interpolation data
+{qj,†, f †(qj,†)}N
+j=1 is only known up to small errors in both the position qj ≈ qj,† and the values
+zj ≈ f †(qj,†), and this is Proposition4.2 stated in the main body of the text. We now prove this proposition.
+Proof (Proposition 4.2). Let ψ : Rd → [0, 1] be a compactly supported C∞ function, such that ψ(0)=
+1,∥ψ∥L∞ ≤ 1 and ψ(q)= 0f o r|q|≥ 1/2. Define
+˜f(q) := f †(q)+
+N∑
+j=1
+(
+zj − f †(qj)
+⎞
+ψ
+(
+q− qj
+ρQ
+⎞
+.
+Note that, by assumption, we have
+|qj − qk|≥| qj,† − qk,†|− 2δ≥ 2(ρQ − ρ)≥ ρQ,
+for all j̸= k. In particular, this implies that the functions
+q↦→ ψ
+(
+q− qj
+ρQ
+⎞
+,
+have disjoint support for different values of j. Thus, for any j= 1,... , N,w eh a v e˜f(qj)= zj, and fz,Q is
+the (exact) moving least squares approximation of ˜f . From Proposition C.4 it follows that
+∥˜f − fz,Q∥L∞ ≤ C∥˜f∥Cr hr
+Q,Ω .
+We now note that
+|zj − f †(qj)|≤| zj − f †(qj,†)|+| f †(qj,†)− f †(qj)|≤ ϵ+∥f †∥Cr ρ.
+On the one hand (due to the disjoint supports of the bump functions), we can now make the estimate
+∥˜f − f †∥L∞ ≤ max
+j=1,...,N
+|zj − f †(qj)|≤ ϵ+∥f∥Cr ρ.
+On the other hand (again due to the disjoint supports of the bump functions), we also have
+∥˜f∥Cr ≤∥f †∥Cr + max
+j=1,...,N
+|zj − f †(qj)|ρ−r
+Q ∥ψ∥Cr
+≤∥f †∥Cr + ϵ+∥f †∥Cr ρ
+ρr
+Q
+∥ψ∥Cr .
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 63 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 709
+These two estimates imply that
+∥f † − fz,Q∥L∞ ≤∥f † −˜f∥L∞ +∥˜f − fz,Q∥L∞
+≤
+(
+ϵ+∥f †∥C1 ρ
+⎞
++ C
+(
+∥f †∥Cr +
+(
+ϵ+∥f †∥C1 ρ
+⎞∥ψ∥Cr
+ρr
+Q
+⎞
+hr
+Q,Ω .
+Taking into account that hQ,Ω/ρQ ≤ κ is bounded, that ∥ψ∥Cr is independent of f †, and introducing a
+new constant C= C(d, r,κ,∥ψ∥Cr )> 0, we obtain
+∥f † − fz,Q∥L∞ ≤ C
+(
+∥f †∥Cr hr
+Q,Ω + ϵ+∥f †∥C1 ρ
+⎞
+,
+as claimed. □
+Appendix D. Complexity estimates for HJ-Net approximation
+In the last section, we have shown that given a set of initial data F ⊂ Cr
+per(Ω), with r ≥ 2 and Ω =
+[0, 2π ]d, the method of characteristics is applicable for a positive time T∗ > 0. In the present section, we
+will combine this result with the proposed HJ-Net framework to derive quantitative error and complexity
+estimates for the approximation of the solution operator of ( HJ). This will require estimates for the
+approximation of the Hamiltonian flow Ψt ≈ Ψ †
+t by neural networks, as well as an estimate for the
+reconstruction error resulting from the pruned moving least squares operator R.
+D.1 Approximation of Hamiltonian flow
+Proof (Proposition 5.4). It follows from ( Ya r o t s ky, 2017, Theorem 1) (and a simple scaling argument),
+that there exists a constant C = C(r, d)> 0, such that for any ϵ> 0, there exists a neural network
+Ψt ≈ Ψ †
+t satisfying the bound,
+sup
+(q0,p0,z0)∈Ω×[−M,M]d×[−M,M]
+⏐⏐⏐Ψt(q0, p0, z0)− Ψ †
+t (q0, p0, z0)
+⏐⏐⏐≤ ϵ,( D . 1 )
+and such that
+depth(Ψt)≤ C log
+(
+Mr∥Ψ †
+t ∥Cr
+ϵ
+⎞
+,
+size(Ψt)≤ C
+(
+Mr∥Ψ †
+t ∥Cr
+ϵ
+⎞(2d+1)/r
+log
+(
+Mr∥Ψ †
+t ∥Cr
+ϵ
+⎞
+,
+where∥Ψ †
+t ∥Cr =∥Ψ †
+t ∥Cr(Ω×[−M,M]d×[−M,M]) denotes the Cr norm on the relevant domain. To prove the
+claim, we note that for any trajectory (qt, pt) satisfying the Hamiltonian ODE system
+˙qt =∇ pH(qt, pt), ˙pt =−∇ qH(qt, pt),( D . 2 )
+with initial data (q0, p0)∈ Ω× [−M, M]d,w eh a v eb ya s s u m p t i o n3.1:
+d
+dt(1+| pt|2)= pt ·˙pt =− 2pt ·∇ qH(qt, pt)≤ 2LH(1+| pt|2).
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 64 ===
+710 S. LANTHALER AND A. M. STUART
+Integration of this inequality implies|pt|2 ≤ (1+| p0|2) exp(2LH t)≤ (1+ dM2) exp(2LH t). Taking also
+into account that M ≥ 1, this implies that pt ∈ [−βM,βM]d, where β = (1+
+√
+d) exp(LH t) depends
+only on d, LH and t. Since pt remains uniformly bounded and since q ↦→ H(q, p) is 2π -periodic, it
+follows that for any (q0, p0) ∈ Ω × [−M, M]d the Hamiltonian trajectory (qt, pt) starting at (q0, p0)
+stays in Ω× [−βM,βM].
+Recall that Ψ †
+t (q0, p0, z0)= (qt, pt, zt) is the flow map of the Hamiltonian ODE (D.2) combined with
+the action integral
+zt = z0 +
+∫t
+0
+[
+pt ·∇ pH(qt, pt)− H(qt, pt)
+]
+dτ .( D . 3 )
+Since the Hamiltonian trajectories starting at(q0, p0)∈ Ω×[−M, M]d are confined toΩ×[−βM,βM]d
+and since the right-hand side of ( D.2) and (D.3) involve only first-order derivatives of H, it follows from
+basic ODE theory that there exists C= C(∥H∥Cr+1(Ω×[−βM,βM]d , M, t, r)> 0, such that the Cr-norm of
+the flow can be bounded by
+∥Ψt∥Cr(Ω×[−M,M]d×[−M,M]) ≤ C(∥H∥Cr+1(Ω×[−βM,βM]d , M, t, r).
+In particular, we finally conclude that there exist constants β = β(LH , d, t) and C =
+C(∥H∥Cr+1(Ω×[−βM,βM]d), M, t, r)> 0, such that for any ϵ> 0, there exists a neural network Ψt ≈ Ψ †
+t
+satisfying the bound ( D.1), and such that
+depth(Ψt)≤ C log
+(
+ϵ−1
+⎞
+,s i z e (Ψt)≤ Cϵ−(2d+1)/r log
+(
+ϵ−1
+⎞
+.
+□
+D.2 Reconstruction error
+Proof. (Proposition 5.6)L e t f † ∈ Cr
+per(Ω) be given with r ≥ 2, and let {qj, zj}N
+j=1 be approximate
+interpolation data, with
+|qj − qj,†|≤ hr
+Q,Ω , |zj − f †(qj,†)|≤ hr
+Q,Ω .
+The assertion of this proposition is restricted to Q† ={ qj,†}N
+j=1 satisfying hQ†,Ω ≤ h0 for a constant
+h0 (to be determined below). We may wlog assume that h0 ≤ 1/16 in the following. Denote Q :=
+{qj}N
+j=1. We recall that the first step in the reconstruction Algorithm 2 consists in an application of the
+pruning Algorithm 1 to determine pruned interpolation points Q′={ qj1 ,... , qjm}⊂ Q, such that (cf.
+Lemma C3)
+ρQ′≤ hQ′,Ω ≤ 3ρQ′, hQ′,Ω ≤ 3hQ,Ω , hQ,Ω ≤ ρQ′.
+Step 1: Write Q′,† ={ qj1,†,... , qjm,†}. Our first goal is to show that Q′† is quasi-uniform:T ot h i s
+end, we note that by definition of the separation distance and the upper bound on the distance of qj,† and
+qj:
+ρQ′,† ≥ ρQ′− 2m a x
+k
+|qjk ,† − qjk|≥ ρQ′− 2hr
+Q†,Ω .
+By the definition of the fill distance, and the assumption that hQ†,Ω ≤ h0 ≤ 1/2 and r≥ 2, we also have
+hQ†,Ω ≤ hQ,Ω + sup
+j
+|qj − qj,†|≤ hQ,Ω + hr
+Q†,Ω ≤ hQ,Ω + 1
+2 hQ†,Ω ,
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 65 ===
+PARAMETRIC COMPLEXITY OF OPERA TOR LEARNING 711
+implying the upper bound hQ†,Ω ≤ 2hQ,Ω ≤ 2ρQ′. Similarly, we can show that hQ′,†,Ω ≤ 2hQ′,Ω .
+Substitution in the lower bound on ρQ′,† above and using that h0 ≤ 1/16, yields
+ρQ′,† ≥ ρQ′− 2ρ˜Q′(2hQ,Ω)r−1 ≥ ρQ′(1− 2(2h0)r−1)≥ 3
+4ρQ′.
+Thus, we conclude that
+hQ′,†,Ω ≤ 2hQ′,Ω ≤ 6ρQ′≤ 12ρQ′,† .
+Since we always have ρQ′,† ≤ hQ′,†,Ω , we conclude that Q′,† is quasi-uniform with κ = 12.
+Step 2: Next, we intend to apply Proposition 4.2 with Q′,† in place of Q† and with ρ = ϵ= hr
+Q†,Ω :
+To this end, it remains to show that ρ ≤ 1
+2ρQ′,† is bounded by half the separation distance. To see this,
+we note that by the above bounds (recall also that h0 ≤ 1/16),
+ρ≡ hr
+Q†,Ω ≤ hr−1
+0 hQ†,Ω ≤ 1
+16 hQ†,Ω ≤ 1
+16ρQ′≤ 1
+8ρQ′,† < 1
+2ρQ′,† ,
+showing thatρ< 1
+2ρQ′,† . We can thus apply Proposition4.2 to conclude that there exist constantsC, h0 >
+0 (with h0 ≤ 1/16), such that if hQ†,Ω ≤ h0/9, we have
+hQ′,†,Ω ≤ 2hQ′,Ω ≤ 6hQ,Ω ≤ 9hQ†,Ω ≤ h0,
+and hence
+∥f † − fz,Q∥L∞ ≤ C
+(
+∥f †∥Cr(Ω) + ϵ+∥f †∥C1(Ω)ρ
+⎞
+≤ 2C
+(
+1+∥f †∥Cr(Ω)
+⎞
+hr
+Q†,Ω .
+Replacing h0 → h0/9 and C→ 2C now yields the claimed result of Proposition 5.6. □
+Proof. (Proposition 5.7). Let q0,˜q0 ∈ Ω and u0 ∈ F be given, and denote by (qτ , pτ ) the solution of the
+Hamiltonian ODE, with initial value (q0, p0)= (q0,∇qu0(q0)).D e f i n e(˜qτ ,˜pτ ) similarly.
+By compactness of F ⊂ Cr
+per(Ω) ⊂ C2
+per(Ω), there exists a constant M > 0, such that |p0|,|˜p0|≤
+∥u0∥C2(Ω) ≤ M. By continuity of the flow map, there exists M > 0, such that
+|pτ|,|˜pτ|≤ M, ∀τ ∈ [0, t].
+Then, we have
+d
+dτ|(qτ , pτ )− (˜qτ ,˜pτ )|≤
+⏐⏐∇H(qτ , pτ )−∇ H(˜qτ ,˜pτ )
+⏐⏐
+≤
+(
+sup
+q∈Ω,|p|≤M
+∥D2H(q, p)∥
+⎞
+|(qτ , pτ )− (˜qτ ,˜pτ )|,
+where D2H denotes the Hessian of H and∥D2H∥is the matrix norm induced by the Euclidean vector
+norm. Further denoting
+∥D2H∥∞ := sup
+q∈Ω,|p|≤M
+∥D2H(q, p)∥,
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026
+
+=== PAGE 66 ===
+712 S. LANTHALER AND A. M. STUART
+then by Gronwall’s inequality, it follows that
+|(qt, pt)− (˜qt,˜pt)|≤ e∥D2H∥∞t|(q0, p0)− (˜q0,˜p0)|.
+Furthermore, since p0 =∇ qu0(q0), and ˜p0 =∇ qu0(˜q0),w eh a v e|p0 −˜p0|≤∥ u0∥C2|q0 −˜q0|≤
+M|q0 −˜q0|, which implies that
+|(qt, pt)− (˜qt,˜pt)|≤ e∥D2H∥∞t|(q0, p0)− (˜q0,˜p0)|
+≤ (1+ M)e∥D2H∥∞t|q0 −˜q0|.
+Therefore, Φ†
+t,u0 (q0)= qt, Φ†
+t,u0(˜q0)=˜qt satisfy the estimate
+⏐⏐
+⏐Φ
+†
+t,u0(q0)− Φ†
+t,u0 (˜q0)
+⏐⏐
+⏐≤ C|q
+0 −˜q0|,
+with constant
+C= (1+ M) exp
+(
+t sup
+q∈Ω,|p|≤M
+∥D2H(q, p)∥
+⎞
+,
+which depends only on t, H and on F (via M and M), but is independent of the particular choice of u0.
+Thus, if
+Ω ⊂
+N⋃
+j=1
+Bh(qj),
+then
+Ω ⊂
+N⋃
+j=1
+BCh(Φ†
+t,u0(qj)),
+for any u0 ∈ F. This implies the claim. □
+Downloaded from https://academic.oup.com/imajna/article/46/2/647/8236424 by Head Serials and Electronic Resources Dept user on 02 June 2026

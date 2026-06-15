@@ -1,0 +1,22 @@
+\frametitle{\thesection . Parametric PDEs and FEONets}
+\framesubtitle{$\quad$}
+{\Large {\color{blue}Equation:}} {\Large Given $ a (x), b (x), c (x) $, input parameter $ f (x) $, output solution $ u $:}
+\begin{equation}
+    - \text{div} (a (x) \nabla u) + b (x) \cdot \nabla u + c (x) u = f (x) \quad \text{in } D, \quad u|_{\partial D} = g (x).
+\end{equation}
+{\Large {\color{blue}Objective:} {\color{red}Estimate the error between the true solution and the FEONets solution.}}
+\medskip
+
+%{\Large {\color{blue}Question:} How does operator learning method work?}
+%\medskip
+
+{\Large {\color{blue} 1. Supervised learning (DeepONet, FNO):} $ \| u_{\text{NN}} (f; \theta) - u_{\text{trad}} \|^2 $}
+\medskip
+
+{\Large $ u_{\text{trad}} $ is the solution obtained by traditional numerical methods, e.g., FEM {\b$ A u_{\text{trad}} = L $}
+\begin{align}
+    \| u_{\text{NN}} (f;\theta) - A^{-1} L \|^2
+\end{align} }
+
+{\Large {\color{blue} 2. Unsupervised learning (FEONet):} $ \| A u_{\text{NN}}(f;\theta) - L \|^2 $}
+

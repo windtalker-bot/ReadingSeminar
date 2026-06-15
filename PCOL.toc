@@ -1,0 +1,5 @@
+\beamer@sectionintoc {1}{{\Large The course of parametric complexity}}{2}{0}{1}
+\beamer@sectionintoc {2}{{\Large The Hamilton-Jacobi equation}}{6}{0}{2}
+\beamer@sectionintoc {3}{{\Large Explicit error for self-adjoint PDEs}}{13}{0}{3}
+\beamer@sectionintoc {4}{{\Large Numerical Experiments}}{19}{0}{4}
+\beamer@sectionintoc {5}{{\Large Conclusion} }{23}{0}{5}
